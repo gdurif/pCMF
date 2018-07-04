@@ -3,7 +3,6 @@
 .RData
 .Ruserdata
 
-RcppExports*
 MD5
 
 *.o
@@ -14,7 +13,4 @@ MD5
 *.Rcheck
 *.tar.gz
 
-install/*
-
-.svn
-
+.R_libs/*

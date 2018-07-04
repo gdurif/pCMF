@@ -1,11 +1,25 @@
 Package: pCMF
 Type: Package
-Title: What the Package Does (Title Case)
-Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
-License: What license is it under?
+Title: Probabilistic Factorization of Count Matrices
+Version: 1.0
+Date: 2018-07-04
+Author: Ghislain Durif
+Maintainer: Ghislain Durif <gd.dev@libertymail.net>
+Description: Routines for probabilistic count matrices factorization (pCMF). 
+    Generalization of PCA to zero-inflated and over-dispersed count data, 
+    based on Gamma-Poisson factor model and variational inference framework.
+    pCMF is specifically designed to analyze single-cell expression data 
+    (scRNA-seq).
+License: GPL (>= 2)
 Encoding: UTF-8
+Imports:
+    Rcpp (>= 0.12.15),
+    RcppEigen (>= 0.3.3.3.1),
+    fields,
+    ggplot2
+Depends:
+    R (>= 3.0)
+LinkingTo: Rcpp, RcppEigen, BH, testthat
+Suggests: testthat
 LazyData: true
+RoxygenNote: 6.0.1
