@@ -23,14 +23,11 @@
 * \date 10/04/2018
 */
 
-#include <omp.h>
-// [[Rcpp::plugins(openmp)]]
 #include <Rcpp.h>
 #include <RcppEigen.h>
 
 #include "algorithm_variational_EM.h"
 #include "sparse_gap_factor_model.h"
-#include "utils/random.h"
 #include "wrapper_sparse_gap_factor.h"
 
 // [[Rcpp::depends(RcppEigen)]]

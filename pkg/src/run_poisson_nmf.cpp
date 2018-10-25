@@ -23,15 +23,11 @@
 * \date 26/02/2018
 */
 
-#include <omp.h>
-// [[Rcpp::plugins(openmp)]]
 #include <Rcpp.h>
 #include <RcppEigen.h>
-#include <stdio.h>
 
 #include "algorithm_simple_factor.h"
 #include "poisson_nmf.h"
-#include "utils/random.h"
 #include "wrapper_matrix_factor.h"
 
 // [[Rcpp::depends(RcppEigen)]]

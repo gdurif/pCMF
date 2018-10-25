@@ -55,13 +55,18 @@ Analysis. arXiv:1710.11028 [stat].
 ### Installation
 
 You can install the `pCMF` R package with the following R command:
-
 ```R
-devtools::install_git("https://gitlab.inria.fr/gdurif/pCMF", subdir="pkg")
+devtools::install_git("https://gitlab.inria.fr/gdurif/pCMF", subdir="pkg", branch="prod")
 ```
 
-To install the `devtools` package, you can run:
+If you don't have OpenMP installed on your machine (for instance on MacOS), you can run the following command:
+```R
+devtools::install_git("https://gitlab.inria.fr/gdurif/pCMF", subdir="pkg", branch="prod_no_omp")
+```
+**Note:** We encourage you to install a compiler (e.g. gcc) that supports OpenMP in order 
+to benefit from multi-core computing and improve computation performance.
 
+To install the `devtools` package, you can run:
 ```R
 install.packages("devtools")
 ```
@@ -70,8 +75,19 @@ You can also use the git repository available at <https://gitlab.inria.fr/gdurif
 then build and install the package with Rstudio (the [project file](./pCMF.Rproj) 
 is set accordingly) or with the R command line tools.
 
-Once you cloned the git repository, you can also run:
+To clone the repository, you can do:
+```bash
+git clone https://gitlab.inria.fr/gdurif/pCMF.git
+```
+**Note:** if you don't have OpenMP on your system (c.f. previously), after cloning
+the repository, you should do:
+```bash
+cd pCMF
+git fetch origin prod_no_omp
+git checkout prod_no_omp
+```
 
+Once you cloned the git repository, you can run to install the `pCMF` package:
 ```R
 devtools::install("/path/to/pCMF/pkg") # you should edit the path
 ```

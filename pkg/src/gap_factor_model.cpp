@@ -23,8 +23,11 @@
 * \date 07/02/2018
 */
 
+#if defined(_OPENMP)
 #include <omp.h>
 // [[Rcpp::plugins(openmp)]]
+#endif
+
 #include <Rcpp.h>
 #include <RcppEigen.h>
 

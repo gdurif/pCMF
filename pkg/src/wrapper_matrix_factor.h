@@ -27,8 +27,11 @@
 #ifndef MATRIX_FACTOR_WRAPPER_H
 #define MATRIX_FACTOR_WRAPPER_H
 
+#if defined(_OPENMP)
 #include <omp.h>
 // [[Rcpp::plugins(openmp)]]
+#endif
+
 #include <Rcpp.h>
 #include <RcppEigen.h>
 #include <stdio.h>
