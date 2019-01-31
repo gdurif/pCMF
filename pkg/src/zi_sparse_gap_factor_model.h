@@ -29,6 +29,7 @@
 #include <RcppEigen.h>
 
 #include "sparse_gap_factor_model.h"
+#include "utils/random.h"
 
 // [[Rcpp::depends(RcppEigen)]]
 using Eigen::MatrixXd;                  // variable size matrix, double precision
@@ -38,15 +39,15 @@ using Eigen::VectorXd;                  // variable size vector, double precisio
 namespace pCMF {
 
 /*!
-* \brief definition of the Zero-inflated Sparse Gamma Poisson Factor model
-*
-* Zero-inflation concerns the conditional distribution over the data X
-*
-* The sparsity concerns the factor matrix V
-*
-* Model:
-*     * \f$ X_{ij} = \sum_k Z_{ijk} \f$
-*     * \f$ X_{ij} | (U_{ik},V_{jk})_k,D_{ij} \sim (1-D_{ij}) delta_0(X_{ij}) + D_{ij} * Poisson(U V^t) \f$
+ * \brief definition of the Zero-inflated Sparse Gamma Poisson Factor model
+ *
+ * Zero-inflation concerns the conditional distribution over the data X
+ *
+ * The sparsity concerns the factor matrix V
+ *
+ * Model:
+ *     * \f$ X_{ij} = \sum_k Z_{ijk} \f$
+ *     * \f$ X_{ij} | (U_{ik},V_{jk})_k,D_{ij} \sim (1-D_{ij}) delta_0(X_{ij}) + D_{ij} * Poisson(U V^t) \f$
  *       where \f$ D_{ij} \sim Bernoulli(pi_j^d) \f$ is the drop-out indicator for \f$ X_{ij} \f$
  *       ( \f$ D_{ij} = 0 \f$ corresponds to a drop-out event)
  *       and \f$ pi_j^d \f$ the drop-out probability for gene \f$ j \f$,
@@ -55,32 +56,32 @@ namespace pCMF {
  *       X_{ij} | (U_{ik},V_'jk})_k \sim (1-pi_{j}^d) delta_0(X_{ij}) + pi_{j}^d * Poisson(U V^t) \f$
  *       \f]
  *       thus \f$ Z_{ijk} | U_{ik}, V_{jk}, D_{ij} \sim (1-D_{ij}) delta_0(Z_{ijk}) + D_{ij} * Poisson(U_{ik} V_{jk}) \f$
-*     * \f$ U_{ik} \sim Gamma(\alpha_{ik}) \f$ with \f$ \alpha_{ik} = (\alpha_{ik,1}, \alpha_{ik,2}) \f$
-*     * \f$ V_{jk} \sim (1-p_{k}^s) delta_0(V_{jk}) + p_{k}^s Gamma(\beta_{jk}) \f$ with \f$ \beta_{jk} = (\beta_{jk,1}, \beta_{jk,2}) \f$
-*       which corresponds to a two-group prior in a spike-and-slab setting (for probabilistic variable selection).
-*       In practice, we introduce the variables \f$ V'_{jk} \sim Gamma(\beta_{jk}) \f$ and Bernoulli
-*       variables \f$ S_{jk} \sim Bernoulli(pi_j^s) \f$ indicating is \f$ V_{jk} \f$ is selected or not \f$.
-*       Note:
-*           - In our approach, all \f$ \alpha_{ik} \f$ are identical across i.
-*           - Similarly, all \f$ \beta_{jk} \f$ are identical across j.
-*     * Consequence 1: \f$ Z_{ijk} | D_{ij}, U_{ik}, V'_{jk}, S_{jk} \sim Poisson(D_{ij} U_{ik} V'_{jk} S_{jk}) \f$
-*     * Consequence 2: \f$ (Z_{ijk})_k \sim Multinomial((\rho_{ijk})_k)
-*       where \f$ \rho_{ijk} = \frac{U_{ik} V'_{jk} S_{jk}}{\sum_l U_{il} V'_{jl} S_{jl}} \f$
-*
-* Variational distribution \f$ q \f$:
-*     * \f$ (Z_{ijk})_k \sim_q Multinomial((r_{ijk})_k)
-*     * \f$ U_{ik} \sim_q Gamma(a_{ik}) \f$ with \f$ a_{ik} = (a_{ik,1}, a_{ik,2}) \f$
-*     * \f$ V'_{jk} \sim_q Gamma(b_{jk}) \f$ with \f$ b_{jk} = (b_{jk,1}, b_{jk,2}) \f$
-*     * \f$ S_{jk} \sim_q Bernoulli(p_{jk}^s) \f$
-*
-* Sufficient statitics needed:
-*     * \f$ E_q[U_{ik}] \f$, \f$ E_q[log(U_{ik})] \f$
-*     * \f$ E_q[V'_{jk}] \f$, \f$ E_q[log(V'_{jk})] \f$
-*     * \f$ \sum_i E_q[D_{ij}] E_q[Z_{ijk}] = \sum_i p_{ij}^d * X_{ij} r_{ijk} \f$
-*     * \f$ \sum_j E_q[D_{ij}] E_q[Z_{ijk}] = \sum_j p_{ij}^d * X_{ij} r_{ijk} \f$
-*     * \f$ \sum_k exp(E_q[log(U_{ik})] + E_q[log(V_{jk})]) \f$
-*
-*/
+ *     * \f$ U_{ik} \sim Gamma(\alpha_{ik}) \f$ with \f$ \alpha_{ik} = (\alpha_{ik,1}, \alpha_{ik,2}) \f$
+ *     * \f$ V_{jk} \sim (1-p_{k}^s) delta_0(V_{jk}) + p_{k}^s Gamma(\beta_{jk}) \f$ with \f$ \beta_{jk} = (\beta_{jk,1}, \beta_{jk,2}) \f$
+ *       which corresponds to a two-group prior in a spike-and-slab setting (for probabilistic variable selection).
+ *       In practice, we introduce the variables \f$ V'_{jk} \sim Gamma(\beta_{jk}) \f$ and Bernoulli
+ *       variables \f$ S_{jk} \sim Bernoulli(pi_j^s) \f$ indicating is \f$ V_{jk} \f$ is selected or not \f$.
+ *       Note:
+ *           - In our approach, all \f$ \alpha_{ik} \f$ are identical across i.
+ *           - Similarly, all \f$ \beta_{jk} \f$ are identical across j.
+ *     * Consequence 1: \f$ Z_{ijk} | D_{ij}, U_{ik}, V'_{jk}, S_{jk} \sim Poisson(D_{ij} U_{ik} V'_{jk} S_{jk}) \f$
+ *     * Consequence 2: \f$ (Z_{ijk})_k \sim Multinomial((\rho_{ijk})_k)
+ *       where \f$ \rho_{ijk} = \frac{U_{ik} V'_{jk} S_{jk}}{\sum_l U_{il} V'_{jl} S_{jl}} \f$
+ *
+ * Variational distribution \f$ q \f$:
+ *     * \f$ (Z_{ijk})_k \sim_q Multinomial((r_{ijk})_k)
+ *     * \f$ U_{ik} \sim_q Gamma(a_{ik}) \f$ with \f$ a_{ik} = (a_{ik,1}, a_{ik,2}) \f$
+ *     * \f$ V'_{jk} \sim_q Gamma(b_{jk}) \f$ with \f$ b_{jk} = (b_{jk,1}, b_{jk,2}) \f$
+ *     * \f$ S_{jk} \sim_q Bernoulli(p_{jk}^s) \f$
+ *
+ * Sufficient statitics needed:
+ *     * \f$ E_q[U_{ik}] \f$, \f$ E_q[log(U_{ik})] \f$
+ *     * \f$ E_q[V'_{jk}] \f$, \f$ E_q[log(V'_{jk})] \f$
+ *     * \f$ \sum_i E_q[D_{ij}] E_q[Z_{ijk}] = \sum_i p_{ij}^d * X_{ij} r_{ijk} \f$
+ *     * \f$ \sum_j E_q[D_{ij}] E_q[Z_{ijk}] = \sum_j p_{ij}^d * X_{ij} r_{ijk} \f$
+ *     * \f$ \sum_k exp(E_q[log(U_{ik})] + E_q[log(V_{jk})]) \f$
+ *
+ */
 class zi_sparse_gap_factor_model : public sparse_gap_factor_model {
 
 protected:
@@ -97,8 +98,8 @@ public:
     zi_sparse_gap_factor_model(int n, int p, int K, const MatrixXd &X);
 
     /*!
-    * \brief destructor for the class `zi_sparse_gap_factor_model`
-    */
+     * \brief destructor for the class `zi_sparse_gap_factor_model`
+     */
     ~zi_sparse_gap_factor_model();
 
     /*!
@@ -182,6 +183,21 @@ public:
      * column of X
      */
     virtual void init_zi_param();
+
+    /*!
+     * \brief initialize variational and hyper-parameter from ZI compartment
+     *
+     * Prior probabilities over D i.e. \f$ (pi_j^d)_j \f$ and variational
+     * probabilities over D i.e. \f$ (p_{ij}^d)_j \f$ are
+     * initialized with given input parameter values.
+     *
+     * \param[in] prob_D matrix of dimension n x p to intialize attribute
+     * m_prob_D (variational probabilities over D).
+     * \param[in] prior_D vector of length p to intialize attribute
+     * m_prior_prob_D (prior probabilities over D).
+     */
+    virtual void init_zi_param(const MatrixXd &prob_D,
+                               const VectorXd &prior_D);
 
     /*!
      * \brief randomly perturb parameters

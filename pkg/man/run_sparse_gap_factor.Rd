@@ -9,7 +9,8 @@ run_sparse_gap_factor(X, K, sel_bound = 0.5, U = NULL, V = NULL,
   init_mode = "random", epsilon = 0.01, additional_iter = 10L,
   conv_mode = 1L, ninit = 1L, iter_init = 100L, ncores = 1L,
   reorder_factor = TRUE, seed = NULL, a1 = NULL, a2 = NULL, b1 = NULL,
-  b2 = NULL, alpha1 = NULL, alpha2 = NULL, beta1 = NULL, beta2 = NULL)
+  b2 = NULL, alpha1 = NULL, alpha2 = NULL, beta1 = NULL, beta2 = NULL,
+  prob_S = NULL, prior_S = NULL)
 }
 \arguments{
 \item{X}{a count data matrix of dimension \code{n x p}.}
@@ -134,7 +135,17 @@ prior rate parameter of the Gamma variational distribution over the
 factor \code{V}. Default is NULL and \code{beta2} is initialized based
 on update rules derived in Durif et al. (2017). This input parameter is
 not used if the input parameter \code{U} is not NULL. Note: in the
-standard GaP factor model, all row of \code{beta2} should be identical.
+standard GaP factor model, all row of \code{beta2} should be identical.}
+
+\item{prob_S}{matrix of dimension \code{p x K}, initial values for the
+variational probability parameter for the sparsity indicator matrix \code{S}
+over the factor \code{V}. Default is NULL and \code{prob_S} is initialized
+randomly.}
+
+\item{prior_S}{vector of length \code{p}, initial values for the
+prior probability parameter for the sparsity indicator matrix \code{S} over
+the factor \code{V}. Default is NULL and \code{prior_S} is initialized
+randomly.
 
 Note: input parameters \code{a1}, \code{a2}, \code{b1}, \code{b2} should
 all be set to be used. Similarly, \code{alpha1}, \code{alpha2},

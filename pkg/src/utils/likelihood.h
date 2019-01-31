@@ -26,18 +26,11 @@
 #ifndef LIKELIHOOD_H
 #define LIKELIHOOD_H
 
-#include <boost/math/special_functions/digamma.hpp>
 #include <math.h>
 #include <RcppEigen.h>
 
 #include "internal.h"
-
-#define mclog() unaryExpr(std::ptr_fun<double,double>(internal::custom_log))
-#define mlgamma() unaryExpr(std::ptr_fun<double,double>(lgamma))
-#define mlog() unaryExpr(std::ptr_fun<double,double>(std::log))
-
-// [[Rcpp::depends(BH)]]
-using boost::math::digamma;
+#include "macros.h"
 
 // [[Rcpp::depends(RcppEigen)]]
 using Eigen::MatrixXd;                  // variable size matrix, double precision

@@ -67,33 +67,15 @@ void poisson_nmf::perturb_param(myRandom::RNGType &rng, double noise_level) {
 void poisson_nmf::update_param() {
 
     // ------------- update V ------------- //
-    // colsum on U
-    RowVectorXd colsumU = m_U.colwise().sum();
-
     // compute UV^t => done at previous step (or during init for first step, c.f. 'matrix_factor_model' implementation in 'model.cpp')
-    // element-wise X / UVt
-    MatrixXd tmp = (m_X.array() / m_UVt.array()).matrix();
-
-    // update rule
-    m_V.array() *= (( tmp.transpose() * m_U ).array().rowwise() / colsumU.array()).array();
+    // update rule + avoid under-flowing
+    m_V = (m_V.array() * (( (m_X.array() / m_UVt.array()).matrix().transpose() * m_U ).array().rowwise() / m_U.colwise().sum().array()).array()).cwiseMax(1e-18);
 
     // ------------- update U ------------- //
-    // colsum on V
-    RowVectorXd colsumV = m_V.colwise().sum();
-
     // compute UV^t
     m_UVt = m_U * m_V.transpose();
-    // element-wise X / UVt
-    tmp = (m_X.array() / m_UVt.array()).matrix();
-
-    // update rule
-    m_U.array() *= (( tmp * m_V ).array().rowwise() / colsumV.array()).array();
-
-    // ------------- post-processing ------------- //
-
-    // avoid under-flowing
-    m_U = m_U.cwiseMax(1e-18);
-    m_V = m_V.cwiseMax(1e-18);
+    // update rule + avoid under-flowing
+    m_U = (m_U.array() * (( (m_X.array() / m_UVt.array()).matrix() * m_V ).array().rowwise() / m_V.colwise().sum().array()).array()).cwiseMax(1e-18);
 
     // compute UV^t
     m_UVt = m_U * m_V.transpose();

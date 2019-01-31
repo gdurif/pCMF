@@ -110,6 +110,23 @@ inline double custom_log(double x) {
 };
 
 /*!
+ * \fn custom exponential
+ *
+ * avoid under-flowing
+ *
+ * \param[in] x real positive value
+ *
+ * \return exp(x) if x>-100 else 3e-44
+ */
+inline double custom_exp(double x) {
+    if(x > -100) {
+        return(std::exp(x));
+    } else {
+        return(3e-44);
+    }
+};
+
+/*!
  * \fn custom logit function to avoid under and over-flow
  *
  * log(x/(1-x))

@@ -29,6 +29,7 @@
 #include <RcppEigen.h>
 
 #include "gap_factor_model.h"
+#include "utils/random.h"
 
 // [[Rcpp::depends(RcppEigen)]]
 using Eigen::MatrixXd;                  // variable size matrix, double precision
@@ -112,6 +113,28 @@ public:
      * \param[in,out] rng Boost random number generator
      */
     virtual void init_sparse_param(double sel_bound, myRandom::RNGType &rng);
+
+    /*!
+     * \brief initialize variational and hyper parameters from sparse compartment
+     *
+     * Set m_sel_bound attribute with sel_bound input parameter
+     *
+     * Prior probabilities over D i.e. \f$ (pi_j^s)_j \f$ and
+     * variational probabilities over S i.e. \f$ (p_{jk}^s_j \f$ are
+     * initialized with given input parameter values.
+     *
+     * Indicators \f$ S_{jk} \f$ are randomly generated from Bernoulli(1-m_sel_bound)
+     *
+     * \param[in] sel_bound real value in [0,1] used to threshold sparsity
+     * probabilities for factor V
+     * \param[in] prob_S matrix of dimension p x K to intialize attribute
+     * m_prob_S (variational probabilities over S).
+     * \param[in] prior_S vector of length p to intialize attribute
+     * m_prior_prob_S (prior probabilities over S).
+     */
+    virtual void init_sparse_param(double sel_bound,
+                                   const MatrixXd &prob_S,
+                                   const VectorXd &prior_S);
 
     /*!
      * \brief randomly perturb parameters

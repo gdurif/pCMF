@@ -231,7 +231,8 @@ test_that("pCMF with standard ZI GaP factor model unit tests", {
                              reorder_factor = FALSE, seed = NULL,
                              a1 = NULL, a2 = NULL, b1 = NULL, b2 = NULL,
                              alpha1 = NULL, alpha2 = NULL,
-                             beta1 = NULL, beta2 = NULL)
+                             beta1 = NULL, beta2 = NULL,
+                             prob_D = NULL, prior_D = NULL)
     ## reorder factor
     res <- run_zi_gap_factor(X, K, U = NULL, V = NULL,
                              verbose = FALSE, monitor = TRUE,
@@ -243,7 +244,8 @@ test_that("pCMF with standard ZI GaP factor model unit tests", {
                              reorder_factor = TRUE, seed = NULL,
                              a1 = NULL, a2 = NULL, b1 = NULL, b2 = NULL,
                              alpha1 = NULL, alpha2 = NULL,
-                             beta1 = NULL, beta2 = NULL)
+                             beta1 = NULL, beta2 = NULL,
+                             prob_D = NULL, prior_D = NULL)
     ## convergence mode
     res <- run_zi_gap_factor(X, K, U = NULL, V = NULL,
                              verbose = FALSE, monitor = TRUE,
@@ -255,7 +257,8 @@ test_that("pCMF with standard ZI GaP factor model unit tests", {
                              reorder_factor = FALSE, seed = NULL,
                              a1 = NULL, a2 = NULL, b1 = NULL, b2 = NULL,
                              alpha1 = NULL, alpha2 = NULL,
-                             beta1 = NULL, beta2 = NULL)
+                             beta1 = NULL, beta2 = NULL,
+                             prob_D = NULL, prior_D = NULL)
     ## supply U and V
     res <- run_zi_gap_factor(X, K, U = U, V = V,
                              verbose = FALSE, monitor = TRUE,
@@ -267,7 +270,8 @@ test_that("pCMF with standard ZI GaP factor model unit tests", {
                              reorder_factor = FALSE, seed = NULL,
                              a1 = NULL, a2 = NULL, b1 = NULL, b2 = NULL,
                              alpha1 = NULL, alpha2 = NULL,
-                             beta1 = NULL, beta2 = NULL)
+                             beta1 = NULL, beta2 = NULL,
+                             prob_D = NULL, prior_D = NULL)
 
     ## mutli-init
     res <- run_zi_gap_factor(X, K, U = NULL, V = NULL,
@@ -280,7 +284,8 @@ test_that("pCMF with standard ZI GaP factor model unit tests", {
                              reorder_factor = FALSE, seed = NULL,
                              a1 = NULL, a2 = NULL, b1 = NULL, b2 = NULL,
                              alpha1 = NULL, alpha2 = NULL,
-                             beta1 = NULL, beta2 = NULL)
+                             beta1 = NULL, beta2 = NULL,
+                             prob_D = NULL, prior_D = NULL)
 
     ## multi-init with U and V
     res <- run_zi_gap_factor(X, K, U = U, V = V,
@@ -293,7 +298,23 @@ test_that("pCMF with standard ZI GaP factor model unit tests", {
                              reorder_factor = FALSE, seed = NULL,
                              a1 = NULL, a2 = NULL, b1 = NULL, b2 = NULL,
                              alpha1 = NULL, alpha2 = NULL,
-                             beta1 = NULL, beta2 = NULL)
+                             beta1 = NULL, beta2 = NULL,
+                             prob_D = NULL, prior_D = NULL)
+    ## init prob and prior over D
+    prob_D <- matrix(0.5, n, p)
+    prior_D <- rep(0.5, p)
+    res <- run_zi_gap_factor(X, K, U = NULL, V = NULL,
+                             verbose = FALSE, monitor = TRUE,
+                             iter_max = 100, iter_min = 50,
+                             init_mode = "random",
+                             epsilon = 1e-2, additional_iter = 10,
+                             conv_mode = 1, ninit = 1,
+                             iter_init = 10, ncores = 1,
+                             reorder_factor = FALSE, seed = NULL,
+                             a1 = NULL, a2 = NULL, b1 = NULL, b2 = NULL,
+                             alpha1 = NULL, alpha2 = NULL,
+                             beta1 = NULL, beta2 = NULL,
+                             prob_D = prob_D, prior_D = prior_D)
 
 })
 
@@ -372,7 +393,8 @@ test_that("pCMF with sparse GaP factor model unit tests", {
                                  reorder_factor = FALSE, seed = NULL,
                                  a1 = NULL, a2 = NULL, b1 = NULL, b2 = NULL,
                                  alpha1 = NULL, alpha2 = NULL,
-                                 beta1 = NULL, beta2 = NULL)
+                                 beta1 = NULL, beta2 = NULL,
+                                 prob_S = NULL, prior_S = NULL)
     ## reorder factor
     res <- run_sparse_gap_factor(X, K, U = NULL, V = NULL,
                                  verbose = FALSE, monitor = TRUE,
@@ -384,7 +406,8 @@ test_that("pCMF with sparse GaP factor model unit tests", {
                                  reorder_factor = TRUE, seed = NULL,
                                  a1 = NULL, a2 = NULL, b1 = NULL, b2 = NULL,
                                  alpha1 = NULL, alpha2 = NULL,
-                                 beta1 = NULL, beta2 = NULL)
+                                 beta1 = NULL, beta2 = NULL,
+                                 prob_S = NULL, prior_S = NULL)
     ## convergence mode
     res <- run_sparse_gap_factor(X, K, U = NULL, V = NULL,
                                  verbose = FALSE, monitor = TRUE,
@@ -396,7 +419,8 @@ test_that("pCMF with sparse GaP factor model unit tests", {
                                  reorder_factor = FALSE, seed = NULL,
                                  a1 = NULL, a2 = NULL, b1 = NULL, b2 = NULL,
                                  alpha1 = NULL, alpha2 = NULL,
-                                 beta1 = NULL, beta2 = NULL)
+                                 beta1 = NULL, beta2 = NULL,
+                                 prob_S = NULL, prior_S = NULL)
     ## supply U and V
     res <- run_sparse_gap_factor(X, K, U = U, V = V,
                                  verbose = FALSE, monitor = TRUE,
@@ -408,7 +432,8 @@ test_that("pCMF with sparse GaP factor model unit tests", {
                                  reorder_factor = FALSE, seed = NULL,
                                  a1 = NULL, a2 = NULL, b1 = NULL, b2 = NULL,
                                  alpha1 = NULL, alpha2 = NULL,
-                                 beta1 = NULL, beta2 = NULL)
+                                 beta1 = NULL, beta2 = NULL,
+                                 prob_S = NULL, prior_S = NULL)
 
     ## mutli-init
     res <- run_sparse_gap_factor(X, K, U = NULL, V = NULL,
@@ -421,7 +446,8 @@ test_that("pCMF with sparse GaP factor model unit tests", {
                                  reorder_factor = FALSE, seed = NULL,
                                  a1 = NULL, a2 = NULL, b1 = NULL, b2 = NULL,
                                  alpha1 = NULL, alpha2 = NULL,
-                                 beta1 = NULL, beta2 = NULL)
+                                 beta1 = NULL, beta2 = NULL,
+                                 prob_S = NULL, prior_S = NULL)
 
     ## multi-init with U and V
     res <- run_sparse_gap_factor(X, K, U = U, V = V,
@@ -434,7 +460,23 @@ test_that("pCMF with sparse GaP factor model unit tests", {
                                  reorder_factor = FALSE, seed = NULL,
                                  a1 = NULL, a2 = NULL, b1 = NULL, b2 = NULL,
                                  alpha1 = NULL, alpha2 = NULL,
-                                 beta1 = NULL, beta2 = NULL)
+                                 beta1 = NULL, beta2 = NULL,
+                                 prob_S = NULL, prior_S = NULL)
+    ## init prob and prior over S
+    prob_S <- matrix(0.5, p, K)
+    prior_S <- rep(0.5, p)
+    res <- run_zi_sparse_gap_factor(X, K, U = NULL, V = NULL,
+                                    verbose = FALSE, monitor = TRUE,
+                                    iter_max = 100, iter_min = 50,
+                                    init_mode = "random",
+                                    epsilon = 1e-2, additional_iter = 10,
+                                    conv_mode = 1, ninit = 1,
+                                    iter_init = 10, ncores = 1,
+                                    reorder_factor = FALSE, seed = NULL,
+                                    a1 = NULL, a2 = NULL, b1 = NULL, b2 = NULL,
+                                    alpha1 = NULL, alpha2 = NULL,
+                                    beta1 = NULL, beta2 = NULL,
+                                    prob_S = prob_S, prior_S = prior_S)
 
 })
 
@@ -521,7 +563,9 @@ test_that("pCMF with ZI sparse GaP factor model unit tests", {
                                     reorder_factor = FALSE, seed = NULL,
                                     a1 = NULL, a2 = NULL, b1 = NULL, b2 = NULL,
                                     alpha1 = NULL, alpha2 = NULL,
-                                    beta1 = NULL, beta2 = NULL)
+                                    beta1 = NULL, beta2 = NULL,
+                                    prob_S = NULL, prior_S = NULL,
+                                    prob_D = NULL, prior_D = NULL)
     ## reorder factor
     res <- run_zi_sparse_gap_factor(X, K, U = NULL, V = NULL,
                                     verbose = FALSE, monitor = TRUE,
@@ -533,7 +577,9 @@ test_that("pCMF with ZI sparse GaP factor model unit tests", {
                                     reorder_factor = TRUE, seed = NULL,
                                     a1 = NULL, a2 = NULL, b1 = NULL, b2 = NULL,
                                     alpha1 = NULL, alpha2 = NULL,
-                                    beta1 = NULL, beta2 = NULL)
+                                    beta1 = NULL, beta2 = NULL,
+                                    prob_S = NULL, prior_S = NULL,
+                                    prob_D = NULL, prior_D = NULL)
     ## convergence mode
     res <- run_zi_sparse_gap_factor(X, K, U = NULL, V = NULL,
                                     verbose = FALSE, monitor = TRUE,
@@ -545,7 +591,9 @@ test_that("pCMF with ZI sparse GaP factor model unit tests", {
                                     reorder_factor = FALSE, seed = NULL,
                                     a1 = NULL, a2 = NULL, b1 = NULL, b2 = NULL,
                                     alpha1 = NULL, alpha2 = NULL,
-                                    beta1 = NULL, beta2 = NULL)
+                                    beta1 = NULL, beta2 = NULL,
+                                    prob_S = NULL, prior_S = NULL,
+                                    prob_D = NULL, prior_D = NULL)
     ## supply U and V
     res <- run_zi_sparse_gap_factor(X, K, U = U, V = V,
                                     verbose = FALSE, monitor = TRUE,
@@ -557,7 +605,9 @@ test_that("pCMF with ZI sparse GaP factor model unit tests", {
                                     reorder_factor = FALSE, seed = NULL,
                                     a1 = NULL, a2 = NULL, b1 = NULL, b2 = NULL,
                                     alpha1 = NULL, alpha2 = NULL,
-                                    beta1 = NULL, beta2 = NULL)
+                                    beta1 = NULL, beta2 = NULL,
+                                    prob_S = NULL, prior_S = NULL,
+                                    prob_D = NULL, prior_D = NULL)
 
     ## mutli-init
     res <- run_zi_sparse_gap_factor(X, K, U = NULL, V = NULL,
@@ -570,7 +620,9 @@ test_that("pCMF with ZI sparse GaP factor model unit tests", {
                                     reorder_factor = FALSE, seed = NULL,
                                     a1 = NULL, a2 = NULL, b1 = NULL, b2 = NULL,
                                     alpha1 = NULL, alpha2 = NULL,
-                                    beta1 = NULL, beta2 = NULL)
+                                    beta1 = NULL, beta2 = NULL,
+                                    prob_S = NULL, prior_S = NULL,
+                                    prob_D = NULL, prior_D = NULL)
 
     ## multi-init with U and V
     res <- run_zi_sparse_gap_factor(X, K, U = U, V = V,
@@ -583,7 +635,59 @@ test_that("pCMF with ZI sparse GaP factor model unit tests", {
                                     reorder_factor = FALSE, seed = NULL,
                                     a1 = NULL, a2 = NULL, b1 = NULL, b2 = NULL,
                                     alpha1 = NULL, alpha2 = NULL,
-                                    beta1 = NULL, beta2 = NULL)
+                                    beta1 = NULL, beta2 = NULL,
+                                    prob_S = NULL, prior_S = NULL,
+                                    prob_D = NULL, prior_D = NULL)
+    ## init prob and prior over S
+    prob_S <- matrix(0.5, p, K)
+    prior_S <- rep(0.5, p)
+    res <- run_zi_sparse_gap_factor(X, K, U = NULL, V = NULL,
+                                    verbose = FALSE, monitor = TRUE,
+                                    iter_max = 100, iter_min = 50,
+                                    init_mode = "random",
+                                    epsilon = 1e-2, additional_iter = 10,
+                                    conv_mode = 1, ninit = 1,
+                                    iter_init = 10, ncores = 1,
+                                    reorder_factor = FALSE, seed = NULL,
+                                    a1 = NULL, a2 = NULL, b1 = NULL, b2 = NULL,
+                                    alpha1 = NULL, alpha2 = NULL,
+                                    beta1 = NULL, beta2 = NULL,
+                                    prob_S = prob_S, prior_S = prior_S,
+                                    prob_D = NULL, prior_D = NULL)
+    ## init prob and prior over D
+    prob_D <- matrix(0.5, n, p)
+    prior_D <- rep(0.5, p)
+    res <- run_zi_sparse_gap_factor(X, K, U = NULL, V = NULL,
+                                    verbose = FALSE, monitor = TRUE,
+                                    iter_max = 100, iter_min = 50,
+                                    init_mode = "random",
+                                    epsilon = 1e-2, additional_iter = 10,
+                                    conv_mode = 1, ninit = 1,
+                                    iter_init = 10, ncores = 1,
+                                    reorder_factor = FALSE, seed = NULL,
+                                    a1 = NULL, a2 = NULL, b1 = NULL, b2 = NULL,
+                                    alpha1 = NULL, alpha2 = NULL,
+                                    beta1 = NULL, beta2 = NULL,
+                                    prob_S = NULL, prior_S = NULL,
+                                    prob_D = prob_D, prior_D = prior_D)
+    ## init prob and prior over both D  and S
+    prob_D <- matrix(0.5, n, p)
+    prior_D <- rep(0.5, p)
+    prob_S <- matrix(0.5, p, K)
+    prior_S <- rep(0.5, p)
+    res <- run_zi_sparse_gap_factor(X, K, U = NULL, V = NULL,
+                                    verbose = FALSE, monitor = TRUE,
+                                    iter_max = 100, iter_min = 50,
+                                    init_mode = "random",
+                                    epsilon = 1e-2, additional_iter = 10,
+                                    conv_mode = 1, ninit = 1,
+                                    iter_init = 10, ncores = 1,
+                                    reorder_factor = FALSE, seed = NULL,
+                                    a1 = NULL, a2 = NULL, b1 = NULL, b2 = NULL,
+                                    alpha1 = NULL, alpha2 = NULL,
+                                    beta1 = NULL, beta2 = NULL,
+                                    prob_S = prob_S, prior_S = prior_S,
+                                    prob_D = prob_D, prior_D = prior_D)
 
 })
 

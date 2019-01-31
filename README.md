@@ -39,13 +39,16 @@ model with prior distributions on factors $`U`$ and $`V`$. Our probabilistic
 model is able to account for zero-inflation (potential drop-out events) in 
 the data matrix $`X`$ and/or for sparsity in the factor matrix $`V`$.
 
-More details regarding pCMF can be found in Durif et al. (2017).
+More details regarding pCMF can be found in Durif et al. (2019).
 
 ## Reference
 
-Durif, G., Modolo, L., Mold, J.E., Lambert-Lacroix, S., Picard, F., 2017. 
+Durif, G., Modolo, L., Mold, J.E., Lambert-Lacroix, S., Picard, F., 2019. 
 Probabilistic Count Matrix Factorization for Single Cell Expression Data 
 Analysis. arXiv:1710.11028 [stat].
+
+All codes used to run experiments on pCMF in the paper are 
+available at <https://gitlab.inria.fr/gdurif/pCMF_experiments>.
 
 
 ---

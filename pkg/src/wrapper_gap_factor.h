@@ -37,6 +37,8 @@
 #include <stdio.h>
 #include <string>
 
+#include "utils/random.h"
+
 // [[Rcpp::depends(RcppEigen)]]
 using Eigen::MatrixXd;                  // variable size matrix, double precision
 using Eigen::MatrixXi;                  // variable size matrix, integer
@@ -143,6 +145,18 @@ using std::string;
  * factor \code{V}. Default is NULL and \code{beta2} is initialized based
  * on update rules derived in Durif et al. (2018). This input parameter is
  * not used if the input parameter \code{U} is not NULL.
+ * \param prob_D matrix of dimension \code{n x p}, initial values for the
+ * variational probability parameter for the drop-out indicator matrix \code{D}
+ * accounting for zero-inflation in \code{X}. Default is NULL
+ * and \code{prob_D} is initialized by the frequence of zero in the
+ * corresponding column of \code{X}. This parameter is not used for model
+ * without zero-inflation.
+ * \param prior_D vector of length \code{p}, initial values for the
+ * prior probability parameter for the drop-out indicator matrix \code{D}
+ * accounting for zero-inflation in \code{X}. Default is NULL and
+ * \code{prior_D} is initialized by the frequence of zero in the
+ * corresponding column of \code{X}. This parameter is not used for model
+ * without zero-inflation.
  *
  * Note: input parameters \code{a1}, \code{a2}, \code{b1}, \code{b2} should
  * be all set to be used.
@@ -166,7 +180,9 @@ SEXP wrapper_gap_factor(SEXP X, int K,
                         Rcpp::Nullable<MatrixXd> alpha1 = R_NilValue,
                         Rcpp::Nullable<MatrixXd> alpha2 = R_NilValue,
                         Rcpp::Nullable<MatrixXd> beta1 = R_NilValue,
-                        Rcpp::Nullable<MatrixXd> beta2 = R_NilValue) {
+                        Rcpp::Nullable<MatrixXd> beta2 = R_NilValue,
+                        Rcpp::Nullable<MatrixXd> prob_D = R_NilValue,
+                        Rcpp::Nullable<VectorXd> prior_D = R_NilValue) {
 
     MatrixXd Xin;
     MatrixXd Uin;
@@ -179,6 +195,8 @@ SEXP wrapper_gap_factor(SEXP X, int K,
     MatrixXd alpha2in;
     MatrixXd beta1in;
     MatrixXd beta2in;
+    MatrixXd prob_Din;
+    MatrixXd prior_Din;
 
     std::string init_mode_st = Rcpp::as<std::string>(init_mode);
 
@@ -241,6 +259,14 @@ SEXP wrapper_gap_factor(SEXP X, int K,
         }
     }
 
+    if(prob_D.isNotNull() && prior_D.isNotNull()) {
+        prob_Din = Rcpp::as< Map<MatrixXd> >(prob_D);
+        prior_Din = Rcpp::as< Map<VectorXd> >(prior_D);
+        if((prob_Din.rows() != n) || (prob_Din.cols() != p) || (prior_Din.size() != p)) {
+            Rcpp::stop("Wrong dimension for prob_D and/or prior_D input matrix/vector");
+        }
+    }
+
     // parallelizing
 #if defined(_OPENMP)
     omp_set_num_threads(ncores);
@@ -279,6 +305,11 @@ SEXP wrapper_gap_factor(SEXP X, int K,
 
         for(int nrun=0; nrun<ninit; nrun++) {
             if(verbose) Rcpp::Rcout << "Run " << nrun << std::endl;
+            if(prob_D.isNotNull() && prior_D.isNotNull()) {
+                tmp_model.init_zi_param_gap(prob_Din, prior_Din);
+            } else {
+                tmp_model.init_zi_param_gap();
+            }
             if(U.isNotNull() && V.isNotNull()) {
                 tmp_model.init(Uin, Vin);
                 tmp_model.perturb_param(rng, std::max(Uin.maxCoeff(), Vin.maxCoeff())/K);
@@ -319,6 +350,11 @@ SEXP wrapper_gap_factor(SEXP X, int K,
         my_model.set_verbosity(verbose);
 
     } else {
+        if(prob_D.isNotNull() && prior_D.isNotNull()) {
+            my_model.init_zi_param_gap(prob_Din, prior_Din);
+        } else {
+            my_model.init_zi_param_gap();
+        }
         if(U.isNotNull() && V.isNotNull()) {
             my_model.init(Uin, Vin);
         } else if(a1.isNotNull() && a2.isNotNull() && b1.isNotNull() && b2.isNotNull()) {

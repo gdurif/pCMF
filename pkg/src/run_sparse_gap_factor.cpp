@@ -178,6 +178,14 @@ using std::string;
 //' on update rules derived in Durif et al. (2017). This input parameter is
 //' not used if the input parameter \code{U} is not NULL. Note: in the
 //' standard GaP factor model, all row of \code{beta2} should be identical.
+//' @param prob_S matrix of dimension \code{p x K}, initial values for the
+//' variational probability parameter for the sparsity indicator matrix \code{S}
+//' over the factor \code{V}. Default is NULL and \code{prob_S} is initialized
+//' randomly.
+//' @param prior_S vector of length \code{p}, initial values for the
+//' prior probability parameter for the sparsity indicator matrix \code{S} over
+//' the factor \code{V}. Default is NULL and \code{prior_S} is initialized
+//' randomly.
 //'
 //' Note: input parameters \code{a1}, \code{a2}, \code{b1}, \code{b2} should
 //' all be set to be used. Similarly, \code{alpha1}, \code{alpha2},
@@ -287,7 +295,9 @@ SEXP run_sparse_gap_factor(SEXP X, int K, double sel_bound = 0.5,
                            Rcpp::Nullable<MatrixXd> alpha1 = R_NilValue,
                            Rcpp::Nullable<MatrixXd> alpha2 = R_NilValue,
                            Rcpp::Nullable<MatrixXd> beta1 = R_NilValue,
-                           Rcpp::Nullable<MatrixXd> beta2 = R_NilValue) {
+                           Rcpp::Nullable<MatrixXd> beta2 = R_NilValue,
+                           Rcpp::Nullable<MatrixXd> prob_S = R_NilValue,
+                           Rcpp::Nullable<VectorXd> prior_S = R_NilValue) {
 
     Rcpp::List output = wrapper_sparse_gap_factor<sparse_gap_factor_model, variational_em_algo>(X, K, sel_bound, U, V, verbose, monitor,
                                                                                                 iter_max, iter_min, init_mode,
@@ -295,7 +305,9 @@ SEXP run_sparse_gap_factor(SEXP X, int K, double sel_bound = 0.5,
                                                                                                 ninit, iter_init, ncores,
                                                                                                 reorder_factor, seed,
                                                                                                 a1, a2, b1, b2,
-                                                                                                alpha1, alpha2, beta1, beta2);
+                                                                                                alpha1, alpha2, beta1, beta2,
+                                                                                                prob_S, prior_S,
+                                                                                                R_NilValue, R_NilValue);
     output.attr("class") = "pCMF";
     return output;
 }

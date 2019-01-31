@@ -275,7 +275,8 @@ SEXP run_gap_factor(SEXP X, int K,
                                                                                   ninit, iter_init, ncores,
                                                                                   reorder_factor, seed,
                                                                                   a1, a2, b1, b2,
-                                                                                  alpha1, alpha2, beta1, beta2);
+                                                                                  alpha1, alpha2, beta1, beta2,
+                                                                                  R_NilValue, R_NilValue);
     output.attr("class") = "pCMF";
     return output;
 }

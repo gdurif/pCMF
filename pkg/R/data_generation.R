@@ -31,6 +31,22 @@
 #' More details regarding data generation can be found in Durif et al. (2017,
 #' Appendix).
 #'
+#' If the uniform distribution is used, entries in \code{U} and \code{V} are
+#' simulated from the distribution Uniform(0, 2*\code{average_signal}/\code{K}).
+#'
+#' If the gamma distribution is used, entries in \code{U} and \code{V} are
+#' simulated from the distribution Gamma(\code{average_signal}/\code{K}, 1).
+#' If the parameter \code{disp} is given, then the distribution
+#' Gamma(\code{average_signal}/\code{K}, \code{disp}) is used.
+#'
+#' If the exponential distribution is used, entries in \code{U} and \code{V} are
+#' simulated from the distribution Gamma(1, \code{K}/\code{average_signal})
+#' which corresponds to the distribution
+#' Exponential(\code{K}/\code{average_signal}).
+#'
+#' The noise variables are generated with the same framework, using
+#' the parameter \code{noise_level} instead of \code{average_signal}.
+#'
 #' @references
 #' Durif, G., Modolo, L., Mold, J.E., Lambert-Lacroix, S., Picard, F., 2017.
 #' Probabilistic Count Matrix Factorization for Single Cell Expression Data
@@ -47,22 +63,33 @@
 #' (individuals or variables). Such groups induce a structure of dependence
 #' between the features. Default value is 1 and the features are not
 #' structured into dependent groups. Condition: \code{ngroup} <= \code{K}.
-#' @param average_signal real value, average signal level in the
-#' structured block of the generated matrix.
+#' @param average_signal real value or vector of real value of size \code{ngroup},
+#' average signal level in the structured block of the generated matrix. If a
+#' single value, all groups share the same \code{average_signal}. If a
+#' vector, each group has the corresponding \code{average_signal}.
+#' @param disp real value or vectorof real value of size \code{ngroup}.
+#' If distribution is used, \code{disp} defines the dispersion parameter
+#' for each/all group(s) (if resp vector/single value) for the gamma distribution.
+#' See details. Default value is NULL, and \code{disp} is set to 1.
 #' @param group_separation real value in \[0,1\] indicating the level of
 #' separation between the groups, 0 = no separation, 1 = high separation.
 #' Default value is 0.5.
 #' @param distribution character string, distribution used to generate
-#' the matrix entries. Default is "uniform", another possible value is
-#' "gamma".
+#' the matrix entries. Default is "uniform", other possible values are
+#' "gamma" and "exponential". See details.
 #' @param shuffle_feature boolean, should the features (individuals
 #' or variables) be shuffled in the output.
 #' @param prop_noise_feature real value in \[0,1\], proportion of features
 #' that does not contributes to the group structure, i.e. constitute an
 #' additional group of noise. Default is 0.
-#' @param noise_level real value, average level of the noisy feature.
+#' @param noise_level real value, average level of the noisy feature. Default
+#' is null and the level of noisy feature is set to be
+#' (1 - \code{group_separation}) * \code{average_signal} / \code{disp}.
 #' @param seed integer, seed value for random number generator. Default value
 #' is NULL and no the seed is not specifically set.
+#' @param tag string, tag to name feature (i.e. rows in the factor matrix),
+#' with "tagXXX" where "XXX" is the row number. Default value is NULL and
+#' feature are labelled "1", "2", etc.
 #'
 #' @importFrom stats rgamma runif
 #'
@@ -85,12 +112,14 @@
 #'
 #' @export
 generate_factor_matrix <- function(nfeature, K, ngroup=1, average_signal=1,
+                                   disp=NULL,
                                    group_separation=0.5,
                                    distribution="uniform",
                                    shuffle_feature=TRUE,
                                    prop_noise_feature=0,
-                                   noise_level=0.5,
-                                   seed=NULL) {
+                                   noise_level=NULL,
+                                   seed=NULL,
+                                   tag=NULL) {
     # input check
     if(!is.numeric(nfeature) | !(nfeature>0) | (floor(nfeature) - nfeature !=0)) {
         stop("'nfeature' input parameter should be a positive integer")
@@ -101,13 +130,18 @@ generate_factor_matrix <- function(nfeature, K, ngroup=1, average_signal=1,
     if(!is.numeric(ngroup) | !(ngroup>0) | (ngroup>K)) {
         stop("'ngroup' input parameter should be a positive integer <= 'K'")
     }
-    if(!is.numeric(average_signal) | (average_signal<0)) {
-        stop("'average_signal' input parameter should be a real positive value")
+    if(!is.numeric(average_signal) | any(average_signal<0) | (length(average_signal) != 1 & length(average_signal) != ngroup)) {
+        stop("'average_signal' input parameter should be a real positive value, or a vector of size 'ngroup' of real positive values")
+    }
+    if(!is.null(disp)) {
+        if(!is.numeric(disp) | any(disp<0) | (length(disp) != 1 & length(disp) != ngroup)) {
+            stop("'disp' input parameter should be a real positive value, or a vector of size 'ngroup' of real positive values or a NULL value")
+        }
     }
     if(!is.numeric(group_separation) | (group_separation<0) | (group_separation>1)) {
         stop("'group_separation' input parameter should be a real value in [0,1]")
     }
-    if(!(distribution %in% c("uniform", "gamma"))) {
+    if(!(distribution %in% c("uniform", "gamma", "exponential"))) {
         stop("'distribution' input parameter should be \"uniform\" or \"gamma\"")
     }
     if(!is.logical(shuffle_feature)) {
@@ -116,12 +150,19 @@ generate_factor_matrix <- function(nfeature, K, ngroup=1, average_signal=1,
     if(!is.numeric(prop_noise_feature) | (prop_noise_feature<0) | (prop_noise_feature>1)) {
         stop("'prop_noise_feature' input parameter should be a real value in [0,1]")
     }
-    if(!is.numeric(noise_level) | (noise_level<0)) {
-        stop("'noise_level' input parameter should be a real positive value")
+    if(!is.null(noise_level)) {
+        if(!is.numeric(noise_level) | (noise_level<0)) {
+            stop("'noise_level' input parameter should be a real positive or NULL value")
+        }
     }
     if(!is.null(seed)) {
         if(!is.integer(seed) | (seed<0) ) {
             stop("'seed' input parameter should be NULL or a positive integer")
+        }
+    }
+    if(!is.null(tag)) {
+        if(length(tag)>1) {
+            stop("'tag' should be a single string of characters.")
         }
     }
 
@@ -132,12 +173,19 @@ generate_factor_matrix <- function(nfeature, K, ngroup=1, average_signal=1,
 
     # generate matrix of parameter for each block, dim ngroup x ngroup
     param_block_matrix <- diag(average_signal, nrow=ngroup, ncol=ngroup)
+    disp_block_matrix <- NULL
+    if(is.null(disp)) {
+        disp <- 1
+    }
+    disp_block_matrix <- diag(1, nrow=ngroup, ncol=ngroup)
     if(ngroup>1) {
-        param_block_matrix <- param_block_matrix + average_signal * (1 - group_separation) * (1 - diag(1, nrow=ngroup, ncol=ngroup))
+        param_block_matrix <- param_block_matrix + mean(average_signal) * (1 - group_separation) * (1 - diag(1, nrow=ngroup, ncol=ngroup))
+        disp_block_matrix <- disp_block_matrix + (1 - diag(1, nrow=ngroup, ncol=ngroup))
     }
     # shuffle groups (columns of 'param_block_matrix')
     col_order = sample.int(n=ngroup, size=ngroup, replace=FALSE)
     param_block_matrix <- param_block_matrix[,col_order]
+    disp_block_matrix <- disp_block_matrix[,col_order]
 
     # block id
     id_block <- 1:ngroup
@@ -160,6 +208,7 @@ generate_factor_matrix <- function(nfeature, K, ngroup=1, average_signal=1,
 
             # construction of the parameter matrix by block, dim nfeature x K
             param_matrix <- matrix(NA, nrow=nfeature0, ncol=K)
+            disp_matrix <- matrix(NA, nrow=nfeature0, ncol=K)
             for(row_block in id_block) {
                 for(col_block in id_block) {
                     rows_in_block <- (1:nfeature0)[id_rows == row_block]
@@ -168,44 +217,56 @@ generate_factor_matrix <- function(nfeature, K, ngroup=1, average_signal=1,
                     ncol_block <- length(cols_in_block)
 
                     param_matrix[rows_in_block, cols_in_block] <- matrix(param_block_matrix[row_block, col_block], nrow=nrow_block, ncol=ncol_block)
+                    disp_matrix[rows_in_block, cols_in_block] <- matrix(disp_block_matrix[row_block, col_block], nrow=nrow_block, ncol=ncol_block)
                 }
             }
         } else {
             id_rows <- rep(1, nfeature0)
             param_matrix <- matrix(average_signal, nrow=nfeature0, ncol=K)
+            disp_matrix <- matrix(disp, nrow=nfeature0, ncol=K)
         }
 
         # generation of the factor sub-matrix
         if(distribution == "uniform") {
             mat0 <- sapply(1:K, function(k) return(runif(nfeature0, min=0, max=2*param_matrix[,k]/sqrt(K)))) # matrix nfeature0 x K
         } else if(distribution == "gamma") {
-            mat0 <- sapply(1:K, function(k) return(rgamma(nfeature0, shape=param_matrix[,k]/sqrt(K), rate=1))) # matrix nfeature0 x K
+            mat0 <- sapply(1:K, function(k) return(rgamma(nfeature0, shape=param_matrix[,k]/sqrt(K), rate=disp_matrix[,k]))) # matrix nfeature0 x K
+        } else if(distribution == "exponential") {
+            mat0 <- sapply(1:K, function(k) return(rgamma(nfeature0, shape=1, rate=sqrt(K)/param_matrix[,k]))) # matrix nfeature0 x K
         }
-
     }
 
     ### noise block
     mat_noise <- NULL
     nfeature_noise <- nfeature - nfeature0
+    if(is.null(noise_level)) {
+        noise_level <- mean(average_signal) * (1 - group_separation)
+    }
     if(nfeature_noise > 0) {
         # generation of the factor sub-matrix
         if(distribution == "uniform") {
             mat_noise <- sapply(1:K, function(k) return(runif(nfeature_noise, min=0, max=2*noise_level/sqrt(K)))) # matrix nfeature_noise x K
         } else if(distribution == "gamma") {
-            mat_noise <- sapply(1:K, function(k) return(rgamma(nfeature_noise, shape=noise_level/sqrt(K), rate=1))) # matrix nfeature_noise x K
+            mat_noise <- sapply(1:K, function(k) return(rgamma(nfeature_noise, shape=noise_level/sqrt(K), rate=min(disp)))) # matrix nfeature_noise x K
+        }  else if(distribution == "exponential") {
+            mat_noise <- sapply(1:K, function(k) return(rgamma(nfeature_noise, shape=1, rate=sqrt(K)/noise_level))) # matrix nfeature_noise x K
         }
     }
 
     ### concatenate structuring block matrix and noise block matrix
     mat <- rbind(mat0, mat_noise)
 
-    # shuffle individuals
+    # shuffle rows
     feature_order <- 1:nfeature
     if(shuffle_feature) {
         feature_order <- sample.int(n=nfeature, size=nfeature, replace=FALSE)
     }
     mat <- mat[feature_order,]
     feature_label <- c(id_rows, rep(0, nfeature_noise))[feature_order]
+
+    # name rows
+    rownames(mat) <- paste0(tag, 1:nrow(mat))
+    colnames(mat) <- paste0("comp", 1:ncol(mat))
 
     ### output
     res <- list(factor_matrix=mat, feature_order=feature_order, feature_label=feature_label)
@@ -383,6 +444,10 @@ generate_count_matrix <- function(n, p, K, U, V,
     } else {
         D <- matrix(1, nrow=n, ncol=p)
     }
+
+    # name rows and columns
+    rownames(Xnzi) <- rownames(U)
+    colnames(Xnzi) <- rownames(V)
 
     ## counts model (with zero-inflation if so)
     X <- Xnzi * D

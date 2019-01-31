@@ -29,6 +29,7 @@
 #include <RcppEigen.h>
 
 #include "model.h"
+#include "utils/random.h"
 
 // [[Rcpp::depends(RcppEigen)]]
 using Eigen::MatrixXd;                  // variable size matrix, double precision

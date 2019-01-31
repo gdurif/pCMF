@@ -28,28 +28,23 @@
 // [[Rcpp::plugins(openmp)]]
 #endif
 
+#include <math.h>
 #include <Rcpp.h>
 #include <RcppEigen.h>
-
 #include <stdio.h>
 
 #include "gap_factor_model.h"
-#include "utils/internal.h"
 #include "utils/likelihood.h"
 #include "utils/matrix.h"
 #include "utils/probability.h"
 #include "utils/random.h"
 
+#include "utils/macros.h"
+
 // [[Rcpp::depends(RcppEigen)]]
 using Eigen::Map;                       // 'maps' rather than copies
 using Eigen::MatrixXd;                  // variable size matrix, double precision
 using Eigen::PermutationMatrix;         // variable size permutation matrix
-
-#define mdigammaInv() unaryExpr(std::bind2nd(std::pointer_to_binary_function<double,int,double>(internal::digammaInv),6))
-#define mlgamma() unaryExpr(std::ptr_fun<double,double>(lgamma))
-#define mlog() unaryExpr(std::ptr_fun<double,double>(std::log))
-
-using internal::digammaInv;
 
 namespace pCMF {
 
@@ -258,10 +253,10 @@ void gap_factor_model::prepare_next_iterate_hyper_param() {
 
 // compute absolute and normalized gap of parameters between two iterates
 void gap_factor_model::gap_between_iterates(double &abs_gap, double& norm_gap) {
-    double paramNorm = sqrt(m_a1old.squaredNorm() + m_a2old.squaredNorm()
-                                + m_b1old.squaredNorm() + m_b2old.squaredNorm());
-    double diffNorm = sqrt((m_a1cur - m_a1old).squaredNorm() + (m_a2cur - m_a2old).squaredNorm()
-                               + (m_b1cur - m_b1old).squaredNorm() + (m_b2cur - m_b2old).squaredNorm());
+    double paramNorm = std::sqrt(m_a1old.squaredNorm() + m_a2old.squaredNorm()
+                                     + m_b1old.squaredNorm() + m_b2old.squaredNorm());
+    double diffNorm = std::sqrt((m_a1cur - m_a1old).squaredNorm() + (m_a2cur - m_a2old).squaredNorm()
+                                    + (m_b1cur - m_b1old).squaredNorm() + (m_b2cur - m_b2old).squaredNorm());
     abs_gap = diffNorm;
     norm_gap = diffNorm / paramNorm;
 }
@@ -306,27 +301,27 @@ double gap_factor_model::elbo() {
     this->intermediate_update_variational_multinomial_param();
     // res += (m_X.array() * m_exp_ElogU_ElogV_k.mlog().array()).sum();
     int i,j;
-    VectorXd tmp = VectorXd::Zero(m_p);
+    double tmp = 0;
 #if defined(_OPENMP)
-#pragma omp parallel for private(i)
+#pragma omp parallel for private(i) reduction(+:tmp)
 #endif
     for(j=0; j<m_p; j++) {
         for(i=0; i<m_n; i++) {
-            tmp(j) += m_X(i,j) * std::log(m_exp_ElogU_ElogV_k(i,j));
+            tmp += m_X(i,j) * std::log(m_exp_ElogU_ElogV_k(i,j));
         }
     }
-    res += tmp.sum();
+    res += tmp;
     // res -= (m_X.array() + 1).mlgamma().sum();
-    tmp = VectorXd::Zero(m_p);
+    tmp = 0;
 #if defined(_OPENMP)
-#pragma omp parallel for private(i)
+#pragma omp parallel for private(i) reduction(+:tmp)
 #endif
     for(j=0; j<m_p; j++) {
         for(i=0; i<m_n; i++) {
-            tmp(j) +=  lgamma(m_X(i,j) + 1);
+            tmp +=  lgamma(m_X(i,j) + 1);
         }
     }
-    res -= tmp.sum();
+    res -= tmp;
     return(res);
 }
 
@@ -464,91 +459,64 @@ void gap_factor_model::update_variational_multinomial_param() {
     int i, j, k;
 
     // \sum_k exp(E_q[log(U_{ik})] + E_q[log(V_{jk})])
-    // Rcpp::Rcout << "sum_k exp(E_q[log(U_{ik})] + E_q[log(V_{jk})]) " << std::endl;
-    this->intermediate_update_variational_multinomial_param();
-
-    // \sum_j X_{ij} r_{ijk} = \sum_j E_q[Z_{ijk}]
-    // Rcpp::Rcout << "sum_j X_{ij} r_{ijk} = sum_j E_q[Z_{ijk}] " << std::endl;
-#if defined(_OPENMP)
-#pragma omp parallel for private(j,k)
-#endif
-    for(i=0; i<m_n; i++) {
-        double max_value;
-        double res;
-        double tmp;
-        VectorXd tmpVec(m_K);
-        for(k = 0; k<m_K; k++) {
-            res = 0;
-            for(j=0; j<m_p; j++) {
-                tmpVec = m_ElogU.row(i) + m_ElogV.row(j);
-                max_value = tmpVec.maxCoeff();
-                if(max_value < 100) max_value = 0;
-                tmp = tmpVec(k) - max_value;
-                res += m_X(i,j) * (tmp >= -100 ? std::exp(tmp) : 3e-44) / (m_exp_ElogU_ElogV_k(i,j) > 0 ? m_exp_ElogU_ElogV_k(i,j) : 1);
-            }
-            m_EZ_j(i,k) = res;
-
-            // Rcpp::Rcout << "### m_EZ_j(" << i << ", " << k <<") = " << m_EZ_j(i,k) << std::endl;
-        }
-    }
-
-    // Rcpp::Rcout << "m_EZ_j = " << std::endl;
-    // Rcpp::Rcout << m_EZ_j << std::endl;
-
     // \sum_i X_{ij} r_{ijk} = \sum_i E_q[Z_{ijk}]
-    // Rcpp::Rcout << "sum_i X_{ij} r_{ijk} = sum_i E_q[Z_{ijk}] " << std::endl;
+    // \sum_j X_{ij} r_{ijk} = \sum_j E_q[Z_{ijk}]
+    // new version with reduce
+
+    VectorXd tmp_vec(m_K);
+    double tmp_val = 0;
+    double tmp_acc = 0;
+    double max_value = 0;
+
+    MatrixXd tmp_EZ_i = MatrixXd::Zero(m_p,m_K);
+    MatrixXd tmp_EZ_j = MatrixXd::Zero(m_n,m_K);
+
 #if defined(_OPENMP)
-#pragma omp parallel for private(i,k)
+#pragma omp declare reduction (+: Eigen::MatrixXd: omp_out=omp_out+omp_in)\
+    initializer(omp_priv=MatrixXd::Zero(omp_orig.rows(), omp_orig.cols()))
+#pragma omp parallel for private(i,k,max_value,tmp_val,tmp_vec,tmp_acc) reduction(+:tmp_EZ_i,tmp_EZ_j)
 #endif
     for(j=0; j<m_p; j++) {
-        double max_value;
-        double res;
-        double tmp;
-        VectorXd tmpVec(m_K);
-        for(k = 0; k<m_K; k++) {
-            res = 0;
-            for(i=0; i<m_n; i++) {
-                tmpVec = m_ElogU.row(i) + m_ElogV.row(j);
-                max_value = tmpVec.maxCoeff();
-                if(max_value < 100) max_value = 0;
-                tmp = tmpVec(k) - max_value;
-                res += m_X(i,j) * (tmp >= -100 ? std::exp(tmp) : 3e-44) / (m_exp_ElogU_ElogV_k(i,j) > 0 ? m_exp_ElogU_ElogV_k(i,j) : 1);
-            }
-            m_EZ_i(j,k) = res;
+        for(i=0; i<m_n; i++) {
+            tmp_vec = m_ElogU.row(i) + m_ElogV.row(j);
+            max_value = tmp_vec.maxCoeff();
+            if(max_value < 100) max_value = 0;
+            tmp_vec = (tmp_vec.array() - max_value).matrix().mcexp();
+            tmp_val = tmp_vec.sum();
+            m_exp_ElogU_ElogV_k(i,j) = tmp_val;
+            tmp_val = tmp_val > 0 ? tmp_val : 1;
 
-            // Rcpp::Rcout << "### m_EZ_i(" << j << ", " << k <<") = " << m_EZ_i(j,k) << std::endl;
+            for(int k = 0; k<m_K; k++) {
+                tmp_acc = m_X(i,j) * tmp_vec(k) / tmp_val;
+                tmp_EZ_i(j,k) += tmp_acc;
+                tmp_EZ_j(i,k) += tmp_acc;
+            }
         }
     }
 
-    // Rcpp::Rcout << "m_EZ_i = " << std::endl;
-    // Rcpp::Rcout << m_EZ_i << std::endl;
+    m_EZ_i = tmp_EZ_i;
+    m_EZ_j = tmp_EZ_j;
 }
 
 // intemrediate computation when updating the multinomial parameters in variational framework
 void gap_factor_model::intermediate_update_variational_multinomial_param() {
     int i, j, k;
+
+    VectorXd tmp_vec(m_K);
+    double max_value = 0;
+
     // \sum_k exp(E_q[log(U_{ik})] + E_q[log(V_{jk})])
     // Rcpp::Rcout << "sum_k exp(E_q[log(U_{ik})] + E_q[log(V_{jk})]) " << std::endl;
 #if defined(_OPENMP)
-#pragma omp parallel for private(i,k)
+#pragma omp parallel for private(i,k,max_value,tmp_vec)
 #endif
     for(j=0; j<m_p; j++) {
-        double max_value;
-        double res;
-        double tmp;
-        VectorXd tmpVec(m_K);
         for(i=0; i<m_n; i++) {
-            res = 0;
-            tmpVec = m_ElogU.row(i) + m_ElogV.row(j);
-            max_value = tmpVec.maxCoeff();
+            tmp_vec = m_ElogU.row(i) + m_ElogV.row(j);
+            max_value = tmp_vec.maxCoeff();
             if(max_value < 100) max_value = 0;
-            for(k=0; k<m_K; k++) {
-                tmp = tmpVec(k) - max_value;
-                res += ( tmp >= -100 ? std::exp(tmp) : 3e-44);
-            }
-            m_exp_ElogU_ElogV_k(i,j) = res;
-
-            // Rcpp::Rcout << "### m_exp_ElogU_ElogV_k(" << i << ", " << j <<") = " << m_exp_ElogU_ElogV_k(i, j) << std::endl;
+            tmp_vec = (tmp_vec.array() - max_value).matrix().mcexp();
+            m_exp_ElogU_ElogV_k(i,j) = tmp_vec.sum();
         }
     }
 

@@ -90,7 +90,7 @@ getU <- function(model, log_representation=TRUE) {
         U <- as.matrix(model$factor$U)
     } else if(class(model) == "pCMF") {
         if(log_representation) {
-            U <- apply(as.matrix(model$stats$EU), c(1,2), function(x) return(log(x+1)))
+            U <- apply(as.matrix(model$stats$EU), c(1,2), function(x) return(log(x+1E-5)))
         } else {
             U <- as.matrix(model$stats$EU)
         }

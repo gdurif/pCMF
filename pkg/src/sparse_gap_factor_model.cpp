@@ -28,17 +28,18 @@
 // [[Rcpp::plugins(openmp)]]
 #endif
 
+#include <math.h>
 #include <Rcpp.h>
 #include <RcppEigen.h>
-
 #include <stdio.h>
 
 #include "sparse_gap_factor_model.h"
-#include "utils/internal.h"
 #include "utils/likelihood.h"
 #include "utils/matrix.h"
 #include "utils/probability.h"
 #include "utils/random.h"
+
+#include "utils/macros.h"
 
 // [[Rcpp::depends(RcppEigen)]]
 using Eigen::Map;                       // 'maps' rather than copies
@@ -47,13 +48,6 @@ using Eigen::MatrixXi;                  // variable size matrix, integer
 using Eigen::PermutationMatrix;         // variable size permutation matrix
 using Eigen::RowVectorXd;                  // variable size row vector, double precision
 using Eigen::VectorXd;                  // variable size vector, double precision
-
-#define mdigammaInv() unaryExpr(std::bind2nd(std::pointer_to_binary_function<double,int,double>(internal::digammaInv),6))
-#define mexpit() unaryExpr(std::ptr_fun<double,double>(internal::expit))
-#define mlgamma() unaryExpr(std::ptr_fun<double,double>(lgamma))
-#define mlog() unaryExpr(std::ptr_fun<double,double>(std::log))
-
-using internal::digammaInv;
 
 namespace pCMF {
 
@@ -94,6 +88,18 @@ void sparse_gap_factor_model::init_sparse_param(double sel_bound, myRandom::RNGT
     m_prior_prob_S = VectorXd::Zero(m_p).array();
     myRandom::rUnif(m_prob_S, m_p, m_K, 0, 1, rng);
     m_prior_prob_S = m_prob_S.rowwise().mean();
+    m_S = (m_prob_S.array() >= m_sel_bound).cast<int>();
+}
+
+// initialize variational and hyper parameters from sparse compartment
+// with given values
+void sparse_gap_factor_model::init_sparse_param(double sel_bound,
+                                                const MatrixXd &prob_S,
+                                                const VectorXd &prior_S) {
+    m_sel_bound = sel_bound;
+    m_prob_S = prob_S;
+    m_prior_prob_S = prior_S;
+
     m_S = (m_prob_S.array() >= m_sel_bound).cast<int>();
 }
 
@@ -176,46 +182,47 @@ double sparse_gap_factor_model::elbo() {
 
     // \sum_i S_{jk} * X_{ij} * r_{ijk} * log(sum_l r_{ijl})
     int i,j, k;
-    VectorXd tmp_sum = VectorXd::Zero(m_p);
+    VectorXd tmp_vec(m_K);
+    double tmp = 0;
+    double tmp_val = 0;
+    double tmp_acc = 0;
+    double max_value = 0;
 
 #if defined(_OPENMP)
-#pragma omp parallel for private(i,k)
+#pragma omp parallel for private(i,k,max_value,tmp_val,tmp_vec,tmp_acc) reduction(+:tmp)
 #endif
     for(j=0; j<m_p; j++) {
 
-        MatrixXd r_ik = MatrixXd::Zero(m_n, m_K); // Multinomial param when j=1,...,p is fixed
+        double r_ijk = 0; // Multinomial param when j=1,...,p is fixed
 
         for(i=0; i<m_n; i++) {
-            VectorXd tmpVec = m_ElogU.row(i) + m_ElogV.row(j);
-            double max_value = tmpVec.maxCoeff();
+            tmp_vec = m_ElogU.row(i) + m_ElogV.row(j);
+            max_value = tmp_vec.maxCoeff();
             if(max_value < 100) max_value = 0;
-            for(k=0; k<m_K; k++) {
-                double tmp = tmpVec(k) - max_value;
-                r_ik(i,k) = m_S(j,k) * (tmp >= -100 ? std::exp(tmp) : 3e-44) / (m_exp_ElogU_ElogV_k(i,j) > 0 ? m_exp_ElogU_ElogV_k(i,j) : 1);
-            }
-        }
+            tmp_vec = ((tmp_vec.array() - max_value).matrix().mcexp()).cwiseProduct(m_S.row(j).transpose().cast<double>());
+            tmp_val = tmp_vec.sum();
+            tmp_val = tmp_val > 0 ? tmp_val : 1;
 
-        for(k=0; k<m_K; k++) {
-            double res = 0;
-            for(i=0; i<m_n; i++) {
-                // tmp_sum(j) += m_prob_S(j,k) * m_X(i,j) * r_ik(i,k) * std::log(m_exp_ElogU_ElogV_k(i,j));
-                tmp_sum(j) += m_prob_S(j,k) * m_X(i,j) * r_ik(i,k) * (m_ElogU(i,k) + m_ElogV(j,k));
+            for(int k = 0; k<m_K; k++) {
+                r_ijk = tmp_vec(k) / tmp_val;
+                // tmp += m_prob_S(j,k) * m_X(i,j) * r_ijk * std::log(m_exp_ElogU_ElogV_k(i,j));
+                tmp += m_prob_S(j,k) * m_X(i,j) * r_ijk * (m_ElogU(i,k) + m_ElogV(j,k));
             }
         }
     }
-    res += tmp_sum.sum();
+    res += tmp;
 
     // res -= (m_X.array() + 1).mlgamma().sum();
-    tmp_sum = VectorXd::Zero(m_p);
+    tmp = 0;
 #if defined(_OPENMP)
-#pragma omp parallel for private(i)
+#pragma omp parallel for private(i) reduction(+:tmp)
 #endif
     for(j=0; j<m_p; j++) {
         for(i=0; i<m_n; i++) {
-            tmp_sum(j) += lgamma(m_X(i,j) + 1);
+            tmp += lgamma(m_X(i,j) + 1);
         }
     }
-    res -= tmp_sum.sum();
+    res -= tmp;
 
     return(res);
 }
@@ -321,81 +328,64 @@ void sparse_gap_factor_model::update_variational_multinomial_param() {
     int i, j, k;
 
     // \sum_k exp(E_q[log(U_{ik})] + E_q[log(V_{jk})])
-    // Rcpp::Rcout << "sum_k exp(E_q[log(U_{ik})] + E_q[log(V_{jk})]) " << std::endl;
-    this->intermediate_update_variational_multinomial_param();
-
-    // \sum_j X_{ij} r_{ijk} = \sum_j E_q[Z_{ijk}]
-    // Rcpp::Rcout << "sum_j X_{ij} r_{ijk} = sum_j E_q[Z_{ijk}] " << std::endl;
-#if defined(_OPENMP)
-#pragma omp parallel for private(j,k)
-#endif
-    for(i=0; i<m_n; i++) {
-        double max_value;
-        double res;
-        double tmp;
-        VectorXd tmpVec(m_K);
-        for(k = 0; k<m_K; k++) {
-            res = 0;
-            for(j=0; j<m_p; j++) {
-                tmpVec = m_ElogU.row(i) + m_ElogV.row(j);
-                max_value = tmpVec.maxCoeff();
-                if(max_value < 100) max_value = 0;
-                tmp = tmpVec(k) - max_value;
-                res += m_prob_S(j,k) * m_S(j,k) * m_X(i,j) * (tmp >= -100 ? std::exp(tmp) : 3e-44) / (m_exp_ElogU_ElogV_k(i,j) > 0 ? m_exp_ElogU_ElogV_k(i,j) : 1);
-            }
-            m_EZ_j(i,k) = res;
-        }
-    }
-
     // \sum_i X_{ij} r_{ijk} = \sum_i E_q[Z_{ijk}]
-    // Rcpp::Rcout << "sum_i X_{ij} r_{ijk} = sum_i E_q[Z_{ijk}] " << std::endl;
+    // \sum_j X_{ij} r_{ijk} = \sum_j E_q[Z_{ijk}]
+    // new version with reduce
+
+    VectorXd tmp_vec(m_K);
+    double tmp_val = 0;
+    double tmp_acc = 0;
+    double max_value = 0;
+
+    MatrixXd tmp_EZ_i = MatrixXd::Zero(m_p,m_K);
+    MatrixXd tmp_EZ_j = MatrixXd::Zero(m_n,m_K);
+
 #if defined(_OPENMP)
-#pragma omp parallel for private(i,k)
+#pragma omp declare reduction (+: Eigen::MatrixXd: omp_out=omp_out+omp_in)\
+    initializer(omp_priv=MatrixXd::Zero(omp_orig.rows(), omp_orig.cols()))
+#pragma omp parallel for private(i,k,max_value,tmp_acc,tmp_val,tmp_vec) reduction(+:tmp_EZ_i,tmp_EZ_j)
 #endif
     for(j=0; j<m_p; j++) {
-        double max_value;
-        double res;
-        double tmp;
-        VectorXd tmpVec(m_K);
-        for(k = 0; k<m_K; k++) {
-            res = 0;
-            for(i=0; i<m_n; i++) {
-                tmpVec = m_ElogU.row(i) + m_ElogV.row(j);
-                max_value = tmpVec.maxCoeff();
-                if(max_value < 100) max_value = 0;
-                tmp = tmpVec(k) - max_value;
-                res += m_prob_S(j,k) * m_S(j,k) * m_X(i,j) * (tmp >= -100 ? std::exp(tmp) : 3e-44) / (m_exp_ElogU_ElogV_k(i,j) > 0 ? m_exp_ElogU_ElogV_k(i,j) : 1);
+        for(i=0; i<m_n; i++) {
+            tmp_vec = m_ElogU.row(i) + m_ElogV.row(j);
+            max_value = tmp_vec.maxCoeff();
+            if(max_value < 100) max_value = 0;
+            tmp_vec = ((tmp_vec.array() - max_value).matrix().mcexp()).cwiseProduct(m_S.row(j).transpose().cast<double>());
+            tmp_val = tmp_vec.sum();
+            m_exp_ElogU_ElogV_k(i,j) = tmp_val;
+            tmp_val = tmp_val > 0 ? tmp_val : 1;
+
+            for(int k = 0; k<m_K; k++) {
+                tmp_acc = m_prob_S(j,k) * m_X(i,j) * tmp_vec(k) / tmp_val;
+                tmp_EZ_i(j,k) += tmp_acc;
+                tmp_EZ_j(i,k) += tmp_acc;
             }
-            m_EZ_i(j,k) = res;
         }
     }
+
+    m_EZ_i = tmp_EZ_i;
+    m_EZ_j = tmp_EZ_j;
 }
 
 // intemrediate computation when updating the multinomial parameters in variational framework
 void sparse_gap_factor_model::intermediate_update_variational_multinomial_param() {
     int i, j, k;
+
+    VectorXd tmp_vec(m_K);
+    double max_value = 0;
+
     // \sum_k exp(E_q[log(U_{ik})] + E_q[log(V_{jk})])
     // Rcpp::Rcout << "sum_k exp(E_q[log(U_{ik})] + E_q[log(V_{jk})]) " << std::endl;
 #if defined(_OPENMP)
-#pragma omp parallel for private(i,k)
+#pragma omp parallel for private(i,k,max_value,tmp_vec)
 #endif
     for(j=0; j<m_p; j++) {
-        double max_value;
-        double res;
-        double tmp;
-        VectorXd tmpVec(m_K);
         for(i=0; i<m_n; i++) {
-            res = 0;
-            tmpVec = m_ElogU.row(i) + m_ElogV.row(j);
-            max_value = tmpVec.maxCoeff();
+            tmp_vec = m_ElogU.row(i) + m_ElogV.row(j);
+            max_value = tmp_vec.maxCoeff();
             if(max_value < 100) max_value = 0;
-            for(k=0; k<m_K; k++) {
-                tmp = tmpVec(k) - max_value;
-                res += m_S(j,k) * ( tmp >= -100 ? std::exp(tmp) : 3e-44);
-            }
-            m_exp_ElogU_ElogV_k(i,j) = res;
-
-            // Rcpp::Rcout << "### m_exp_ElogU_ElogV_k(" << i << ", " << j <<") = " << m_exp_ElogU_ElogV_k(i, j) << std::endl;
+            tmp_vec = ((tmp_vec.array() - max_value).matrix().mcexp()).cwiseProduct(m_S.row(j).transpose().cast<double>());
+            m_exp_ElogU_ElogV_k(i,j) = tmp_vec.sum();
         }
     }
 
@@ -433,49 +423,45 @@ void sparse_gap_factor_model::update_variational_gamma_param() {
 // update rule for variational parameter from ZI compartment
 void sparse_gap_factor_model::update_variational_sparse_param() {
 
-    this->intermediate_update_variational_multinomial_param();
+    int i,j, k;
+    VectorXd tmp_vec(m_K);
+    MatrixXd tmp_mat = MatrixXd::Zero(m_p,m_K);
+    double tmp = 0;
+    double tmp_val = 0;
+    double tmp_acc = 0;
+    double max_value = 0;
 
-    // Rcpp::Rcout << "ElogU = " << std::endl << m_ElogU << std::endl;
-    // Rcpp::Rcout << "ElogV = " << std::endl << m_ElogV << std::endl;
-    //
-    // Rcpp::Rcout << "S = " << std::endl << m_S << std::endl;
-    //
-    // Rcpp::Rcout << "prob_S = " << std::endl << m_prob_S << std::endl;
-
-    // Rcpp::Rcout << "m_prob_S" << std::endl;
-    int i, j, k;
 #if defined(_OPENMP)
-#pragma omp parallel for private(i,k)
+#pragma omp parallel for private(i,k,max_value,tmp_val,tmp_vec,tmp_acc)
 #endif
     for(j=0; j<m_p; j++) {
+
         if(m_prior_prob_S(j) == 1) {
             m_prob_S.row(j) = RowVectorXd::Ones(m_K);
         } else if(m_prior_prob_S(j) == 0) {
             m_prob_S.row(j) = RowVectorXd::Zero(m_K);
         } else {
-            MatrixXd r_ik = MatrixXd::Zero(m_n, m_K); // Multinomial param when j=1,...,p is fixed
+
+            double r_ijk = 0; // Multinomial param when j=1,...,p is fixed
 
             for(i=0; i<m_n; i++) {
-                VectorXd tmpVec = m_ElogU.row(i) + m_ElogV.row(j);
-                double max_value = tmpVec.maxCoeff();
+                tmp_vec = m_ElogU.row(i) + m_ElogV.row(j);
+                max_value = tmp_vec.maxCoeff();
                 if(max_value < 100) max_value = 0;
-                for(k=0; k<m_K; k++) {
-                    double tmp = tmpVec(k) - max_value;
-                    r_ik(i,k) = m_S(j,k) * (tmp >= -100 ? std::exp(tmp) : 3e-44) / (m_exp_ElogU_ElogV_k(i,j) > 0 ? m_exp_ElogU_ElogV_k(i,j) : 1);
+                tmp_vec = ((tmp_vec.array() - max_value).matrix().mcexp()).cwiseProduct(m_S.row(j).transpose().cast<double>());
+                tmp_val = tmp_vec.sum();
+                tmp_val = tmp_val > 0 ? tmp_val : 1;
+
+                for(int k = 0; k<m_K; k++) {
+                    r_ijk = tmp_vec(k) / tmp_val;
+
+                    tmp_mat(j,k) -= m_EU(i,k) * m_EV(j,k);
+                    tmp_mat(j,k) += m_X(i,j) * r_ijk * (m_ElogU(i,k) + m_ElogV(j,k));
                 }
             }
 
-            // Rcpp::Rcout << "(j) = " << j << " r_ik = " << std::endl << r_ik << std::endl;
-
             for(k=0; k<m_K; k++) {
-                double res = 0;
-                for(i=0; i<m_n; i++) {
-                    res -= m_EU(i,k) * m_EV(j,k);
-                    // res += m_X(i,j) * r_ik(i,k) * std::log(m_exp_ElogU_ElogV_k(i,j));
-                    res += m_X(i,j) * r_ik(i,k) * (m_ElogU(i,k) + m_ElogV(j,k));
-                }
-                // Rcpp::Rcout << "(j,k) = " << j << "," << k << " res = " << res << std::endl;
-                m_prob_S(j,k) = internal::expit( internal::logit(m_prior_prob_S(j)) + res);
+                m_prob_S(j,k) = internal::expit( internal::logit(m_prior_prob_S(j)) + tmp_mat(j,k));
             }
         }
     }

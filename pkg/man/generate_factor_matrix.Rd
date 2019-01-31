@@ -21,8 +21,10 @@ in the generated matrix.}
 between the features. Default value is 1 and the features are not
 structured into dependent groups. Condition: \code{ngroup} <= \code{K}.}
 
-\item{average_signal}{real value, average signal level in the
-structured block of the generated matrix.}
+\item{average_signal}{real value or vector of real value of size \code{ngroup},
+average signal level in the structured block of the generated matrix. If a
+single value, all groups share the same \code{average_signal}. If a
+vector, each group has the corresponding \code{average_signal}.}
 
 \item{group_separation}{real value in \[0,1\] indicating the level of
 separation between the groups, 0 = no separation, 1 = high separation.

@@ -226,6 +226,19 @@ variational_matrix_factor_model::variational_matrix_factor_model(int n, int p, i
 // initialize variational and hyper parameters in sparse model
 void variational_matrix_factor_model::init_sparse_param(double sel_bound, myRandom::RNGType &rng) {}
 
+// initialize variational and hyper parameters in sparse model with given values
+void variational_matrix_factor_model::init_sparse_param(double sel_bound,
+                                                        const MatrixXd &prob_S,
+                                                        const VectorXd &prior_S) {}
+
+// initialize variational and hyper-parameter in zero-inflated model
+void variational_matrix_factor_model::init_zi_param() {}
+
+// initialize variational and hyper-parameter in zero-inflated model with
+// given values
+void variational_matrix_factor_model::init_zi_param(const MatrixXd &prob_D,
+                                                    const VectorXd &prior_D) {}
+
 // update rules for parameters in the optimization process
 void variational_matrix_factor_model::update_param() {
     this->update_variational_param();

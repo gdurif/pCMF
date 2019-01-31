@@ -304,6 +304,37 @@ public:
     virtual void init_sparse_param(double sel_bound, myRandom::RNGType &rng);
 
     /*!
+     * \brief initialize variational and hyper parameters in sparse model
+     * with given values
+     *
+     * \param[in] sel_bound real value in [0,1] used to threshold sparsity
+     * probabilities for factor V
+     * \param[in] prob_S matrix of dimension p x K to intialize attribute
+     * m_prob_S (variational probabilities over S).
+     * \param[in] prior_S vector of length p to intialize attribute
+     * m_prior_prob_S (prior probabilities over S).
+     */
+    virtual void init_sparse_param(double sel_bound,
+                                   const MatrixXd &prob_S,
+                                   const VectorXd &prior_S);
+
+    /*!
+     * \brief initialize variational and hyper-parameter in zero-inflated model
+     */
+    virtual void init_zi_param();
+
+    /*!
+     * \brief initialize variational and hyper-parameter in zero-inflated model
+     *
+     * \param[in] prob_D matrix of dimension n x p to intialize attribute
+     * m_prob_D (variational probabilities over D).
+     * \param[in] prior_D vector of length p to intialize attribute
+     * m_prior_prob_D (prior probabilities over D).
+     */
+    virtual void init_zi_param(const MatrixXd &prob_D,
+                               const VectorXd &prior_D);
+
+    /*!
     * \brief update rules for parameters in the optimization process
     */
     virtual void update_param();

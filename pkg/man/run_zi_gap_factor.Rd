@@ -9,7 +9,8 @@ run_zi_gap_factor(X, K, U = NULL, V = NULL, verbose = TRUE,
   init_mode = "random", epsilon = 0.01, additional_iter = 10L,
   conv_mode = 1L, ninit = 1L, iter_init = 100L, ncores = 1L,
   reorder_factor = TRUE, seed = NULL, a1 = NULL, a2 = NULL, b1 = NULL,
-  b2 = NULL, alpha1 = NULL, alpha2 = NULL, beta1 = NULL, beta2 = NULL)
+  b2 = NULL, alpha1 = NULL, alpha2 = NULL, beta1 = NULL, beta2 = NULL,
+  prob_D = NULL, prior_D = NULL)
 }
 \arguments{
 \item{X}{a count data matrix of dimension \code{n x p}.}
@@ -131,7 +132,21 @@ prior rate parameter of the Gamma variational distribution over the
 factor \code{V}. Default is NULL and \code{beta2} is initialized based
 on update rules derived in Durif et al. (2017). This input parameter is
 not used if the input parameter \code{U} is not NULL. Note: in the
-standard GaP factor model, all row of \code{beta2} should be identical.
+standard GaP factor model, all row of \code{beta2} should be identical.}
+
+\item{prob_D}{matrix of dimension \code{n x p}, initial values for the
+variational probability parameter for the drop-out indicator matrix \code{D}
+accounting for zero-inflation in \code{X}. Default is NULL
+and \code{prob_D} is initialized by the frequence of zero in the
+corresponding column of \code{X}. This parameter is not used for model
+without zero-inflation.}
+
+\item{prior_D}{vector of length \code{p}, initial values for the
+prior probability parameter for the drop-out indicator matrix \code{D}
+accounting for zero-inflation in \code{X}. Default is NULL and
+\code{prior_D} is initialized by the frequence of zero in the
+corresponding column of \code{X}. This parameter is not used for model
+without zero-inflation.
 
 Note: input parameters \code{a1}, \code{a2}, \code{b1}, \code{b2} should
 all be set to be used. Similarly, \code{alpha1}, \code{alpha2},

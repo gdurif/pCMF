@@ -29,6 +29,7 @@
 #include <RcppEigen.h>
 
 #include "gap_factor_model.h"
+#include "utils/random.h"
 
 // [[Rcpp::depends(RcppEigen)]]
 using Eigen::MatrixXd;                  // variable size matrix, double precision
@@ -95,7 +96,8 @@ public:
     ~zi_gap_factor_model();
 
     /*!
-     * \brief Initialize variational and hyper-parameters with given values
+     * \brief Initialize variational and hyper-parameters from Gamma compartment
+     * with given values
      *
      * \param[in] alpha1 matrix n x K, intial values for the first parameter (shape) of Gamma prior on U
      * \param[in] alpha2 matrix n x K, intial values for the second parameter (rate) of Gamma prior on U
@@ -112,7 +114,7 @@ public:
                         const MatrixXd &b1, const MatrixXd &b2);
 
     /*!
-     * \brief Initialize variational parameters with given values
+     * \brief Initialize variational parameters from Gamma compartment with given values
      *
      * \param[in] a1 matrix n x K, intial values for the first parameter (shape) of Gamma variational distribution on U
      * \param[in] a2 matrix n x K, intial values for the second parameter (rate) of Gamma variational distribution on U
@@ -123,7 +125,7 @@ public:
                                 const MatrixXd &b1, const MatrixXd &b2);
 
     /*!
-     * \brief Initialize variational and hyper-parameters with given values
+     * \brief Initialize hyper-parameters from Gamma compartment with given values
      *
      * \param[in] alpha1 matrix n x K, intial values for the first parameter (shape) of Gamma prior on U
      * \param[in] alpha2 matrix n x K, intial values for the second parameter (rate) of Gamma prior on U
@@ -134,7 +136,7 @@ public:
                           const MatrixXd &beta1, const MatrixXd &beta2);
 
     /*!
-     * \brief Initialize variational parameters with from given
+     * \brief Initialize variational parameters from given
      * factor matrices U and V for Gamma compartment
      *
      * U is used to initialize the a1 shape variational parameter. The
@@ -175,6 +177,21 @@ public:
      * column of X
      */
     virtual void init_zi_param();
+
+    /*!
+     * \brief initialize variational and hyper-parameter from ZI compartment
+     *
+     * Prior probabilities over D i.e. \f$ (pi_j^d)_j \f$ and variational
+     * probabilities over D i.e. \f$ (p_{ij}^d)_j \f$ are
+     * initialized with given input parameter values.
+     *
+     * \param[in] prob_D matrix of dimension n x p to intialize attribute
+     * m_prob_D (variational probabilities over D).
+     * \param[in] prior_D vector of length p to intialize attribute
+     * m_prior_prob_D (prior probabilities over D).
+     */
+    virtual void init_zi_param(const MatrixXd &prob_D,
+                               const VectorXd &prior_D);
 
     /*!
      * \brief randomly perturb parameters

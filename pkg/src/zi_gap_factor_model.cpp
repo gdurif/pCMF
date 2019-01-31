@@ -28,9 +28,9 @@
 // [[Rcpp::plugins(openmp)]]
 #endif
 
+#include <math.h>
 #include <Rcpp.h>
 #include <RcppEigen.h>
-
 #include <stdio.h>
 
 #include "zi_gap_factor_model.h"
@@ -40,18 +40,13 @@
 #include "utils/probability.h"
 #include "utils/random.h"
 
+#include "utils/macros.h"
+
 // [[Rcpp::depends(RcppEigen)]]
 using Eigen::Map;                       // 'maps' rather than copies
 using Eigen::MatrixXd;                  // variable size matrix, double precision
 using Eigen::PermutationMatrix;         // variable size permutation matrix
 using Eigen::VectorXd;                  // variable size vector, double precision
-
-#define mdigammaInv() unaryExpr(std::bind2nd(std::pointer_to_binary_function<double,int,double>(internal::digammaInv),6))
-#define mexpit() unaryExpr(std::ptr_fun<double,double>(internal::expit))
-#define mlgamma() unaryExpr(std::ptr_fun<double,double>(lgamma))
-#define mlog() unaryExpr(std::ptr_fun<double,double>(std::log))
-
-using internal::digammaInv;
 
 namespace pCMF {
 
@@ -68,50 +63,35 @@ zi_gap_factor_model::zi_gap_factor_model(int n, int p, int K, const MatrixXd &X)
 // destructor for the class `zi_gap_factor_model`
 zi_gap_factor_model::~zi_gap_factor_model() {}
 
-// Initialize variational and hyper-parameters with given values
+// Initialize variational and hyper-parameters from Gamma compartment with given values
 void zi_gap_factor_model::init_all_param(const MatrixXd &alpha1, const MatrixXd &alpha2,
                                          const MatrixXd &beta1, const MatrixXd &beta2,
                                          const MatrixXd &a1, const MatrixXd &a2,
                                          const MatrixXd &b1, const MatrixXd &b2) {
     this->gap_factor_model::init_all_param(alpha1, alpha2, beta1, beta2,
                                            a1, a2, b1, b2);
-
-    // init ZI param
-    this->init_zi_param();
 }
 
-// Initialize variational parameters with given values
+// Initialize variational parameters from Gamma compartment with given values
 void zi_gap_factor_model::init_variational_param(const MatrixXd &a1, const MatrixXd &a2,
-                                              const MatrixXd &b1, const MatrixXd &b2) {
+                                                 const MatrixXd &b1, const MatrixXd &b2) {
     this->gap_factor_model::init_variational_param(a1, a2, b1, b2);
-
-    // init ZI param
-    this->init_zi_param();
 }
 
-// Initialize variational and hyper-parameters with given values
+// Initialize hyper-parameters from Gamma compartment with given values
 void zi_gap_factor_model::init_hyper_param(const MatrixXd &alpha1, const MatrixXd &alpha2,
-                                        const MatrixXd &beta1, const MatrixXd &beta2) {
+                                           const MatrixXd &beta1, const MatrixXd &beta2) {
     this->gap_factor_model::init_hyper_param(alpha1, alpha2, beta1, beta2);
-
-    // init ZI param
-    this->init_zi_param();
 }
 
 // Initialize variational parameters with from given factor matrices U and V
 void zi_gap_factor_model::init_from_factor(const MatrixXd &U, const MatrixXd &V) {
     this->gap_factor_model::init_from_factor(U, V);
-
-    // init ZI param
-    this->init_zi_param();
 }
 
 // Initialize variational and hyper-parameters with random values
 void zi_gap_factor_model::random_init_model_param(myRandom::RNGType &rng) {
     this->gap_factor_model::random_init_model_param(rng);
-
-    // init ZI param
-    this->init_zi_param();
 }
 
 // initialize variational and hyper-parameter from ZI compartment
@@ -123,6 +103,14 @@ void zi_gap_factor_model::init_zi_param() {
     // m_prob_D = m_freq_D.transpose().replicate(m_n, 1);
     m_prob_D = (m_X.array() > 0).cast<double>();
     // Rcpp::Rcout << "m_prob_D.dim() = " << m_prob_D.rows() << "," << m_prob_D.cols() << std::endl;
+}
+
+// initialize variational and hyper-parameter from ZI compartment with
+// given values
+void zi_gap_factor_model::init_zi_param(const MatrixXd &prob_D,
+                                        const VectorXd &prior_D) {
+    m_prob_D = prob_D;
+    m_prior_prob_D = prior_D;
 }
 
 // randomly perturb parameters
@@ -200,27 +188,29 @@ double zi_gap_factor_model::elbo() {
     this->intermediate_update_variational_multinomial_param();
     // res += (m_X.array() * m_exp_ElogU_ElogV_k.mlog().array()).sum();
     int i,j;
-    VectorXd tmp = VectorXd::Zero(m_p);
+    double tmp = 0;
 #if defined(_OPENMP)
-#pragma omp parallel for private(i)
+#pragma omp parallel for private(i) reduction(+:tmp)
 #endif
     for(j=0; j<m_p; j++) {
         for(i=0; i<m_n; i++) {
-            tmp(j) += m_prob_D(i,j) * m_X(i,j) * std::log(m_exp_ElogU_ElogV_k(i,j));
+            tmp += m_prob_D(i,j) * m_X(i,j) * std::log(m_exp_ElogU_ElogV_k(i,j));
         }
     }
-    res += tmp.sum();
+    res += tmp;
+
     // res -= (m_X.array() + 1).mlgamma().sum();
-    tmp = VectorXd::Zero(m_p);
+    tmp = 0;
 #if defined(_OPENMP)
-#pragma omp parallel for private(i)
+#pragma omp parallel for private(i) reduction(+:tmp)
 #endif
     for(j=0; j<m_p; j++) {
         for(i=0; i<m_n; i++) {
-            tmp(j) += m_prob_D(i,j) * lgamma(m_X(i,j) + 1);
+            tmp += m_prob_D(i,j) * lgamma(m_X(i,j) + 1);
         }
     }
-    res -= tmp.sum();
+    res -= tmp;
+
     return(res);
 }
 
@@ -300,54 +290,43 @@ void zi_gap_factor_model::update_variational_multinomial_param() {
     int i, j, k;
 
     // \sum_k exp(E_q[log(U_{ik})] + E_q[log(V_{jk})])
-    // Rcpp::Rcout << "sum_k exp(E_q[log(U_{ik})] + E_q[log(V_{jk})]) " << std::endl;
-    this->intermediate_update_variational_multinomial_param();
-
-    // \sum_j X_{ij} r_{ijk} = \sum_j E_q[Z_{ijk}]
-    // Rcpp::Rcout << "sum_j X_{ij} r_{ijk} = sum_j E_q[Z_{ijk}] " << std::endl;
-#if defined(_OPENMP)
-#pragma omp parallel for private(j,k)
-#endif
-    for(i=0; i<m_n; i++) {
-        double max_value;
-        double res;
-        double tmp;
-        VectorXd tmpVec(m_K);
-        for(k = 0; k<m_K; k++) {
-            res = 0;
-            for(j=0; j<m_p; j++) {
-                tmpVec = m_ElogU.row(i) + m_ElogV.row(j);
-                max_value = tmpVec.maxCoeff();
-                if(max_value < 100) max_value = 0;
-                tmp = tmpVec(k) - max_value;
-                res += m_prob_D(i,j) * m_X(i,j) * (tmp >= -100 ? std::exp(tmp) : 3e-44) / (m_exp_ElogU_ElogV_k(i,j) > 0 ? m_exp_ElogU_ElogV_k(i,j) : 1);
-            }
-            m_EZ_j(i,k) = res;
-        }
-    }
-
     // \sum_i X_{ij} r_{ijk} = \sum_i E_q[Z_{ijk}]
-    // Rcpp::Rcout << "sum_i X_{ij} r_{ijk} = sum_i E_q[Z_{ijk}] " << std::endl;
+    // \sum_j X_{ij} r_{ijk} = \sum_j E_q[Z_{ijk}]
+    // new version with reduce
+
+    VectorXd tmp_vec(m_K);
+    double tmp_val = 0;
+    double tmp_acc = 0;
+    double max_value = 0;
+
+    MatrixXd tmp_EZ_i = MatrixXd::Zero(m_p,m_K);
+    MatrixXd tmp_EZ_j = MatrixXd::Zero(m_n,m_K);
+
 #if defined(_OPENMP)
-#pragma omp parallel for private(i,k)
+#pragma omp declare reduction (+: Eigen::MatrixXd: omp_out=omp_out+omp_in)\
+    initializer(omp_priv=MatrixXd::Zero(omp_orig.rows(), omp_orig.cols()))
+#pragma omp parallel for private(i,k,max_value,tmp_acc,tmp_val,tmp_vec) reduction(+:tmp_EZ_i,tmp_EZ_j)
 #endif
     for(j=0; j<m_p; j++) {
-        double max_value;
-        double res;
-        double tmp;
-        VectorXd tmpVec(m_K);
-        for(k = 0; k<m_K; k++) {
-            res = 0;
-            for(i=0; i<m_n; i++) {
-                tmpVec = m_ElogU.row(i) + m_ElogV.row(j);
-                max_value = tmpVec.maxCoeff();
-                if(max_value < 100) max_value = 0;
-                tmp = tmpVec(k) - max_value;
-                res += m_prob_D(i,j) * m_X(i,j) * (tmp >= -100 ? std::exp(tmp) : 3e-44) / (m_exp_ElogU_ElogV_k(i,j) > 0 ? m_exp_ElogU_ElogV_k(i,j) : 1);
+        for(i=0; i<m_n; i++) {
+            tmp_vec = m_ElogU.row(i) + m_ElogV.row(j);
+            max_value = tmp_vec.maxCoeff();
+            if(max_value < 100) max_value = 0;
+            tmp_vec = (tmp_vec.array() - max_value).matrix().mcexp();
+            tmp_val = tmp_vec.sum();
+            m_exp_ElogU_ElogV_k(i,j) = tmp_val;
+            tmp_val = tmp_val > 0 ? tmp_val : 1;
+
+            for(int k = 0; k<m_K; k++) {
+                tmp_acc = m_prob_D(i,j) * m_X(i,j) * tmp_vec(k) / tmp_val;
+                tmp_EZ_i(j,k) += tmp_acc;
+                tmp_EZ_j(i,k) += tmp_acc;
             }
-            m_EZ_i(j,k) = res;
         }
     }
+
+    m_EZ_i = tmp_EZ_i;
+    m_EZ_j = tmp_EZ_j;
 }
 
 // rule for variational Gamma parameter in variational framework

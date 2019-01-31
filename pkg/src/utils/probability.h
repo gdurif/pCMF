@@ -30,9 +30,7 @@
 #include <math.h>
 #include <RcppEigen.h>
 
-#define mdigamma() unaryExpr(std::ptr_fun<double,double>(digamma))
-#define mlgamma() unaryExpr(std::ptr_fun<double,double>(lgamma))
-#define mlog() unaryExpr(std::ptr_fun<double,double>(std::log))
+#include "macros.h"
 
 // [[Rcpp::depends(BH)]]
 using boost::math::digamma;

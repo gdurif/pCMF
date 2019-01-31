@@ -37,119 +37,142 @@
 #include <stdio.h>
 #include <string>
 
+#include "utils/random.h"
+
 // [[Rcpp::depends(RcppEigen)]]
 using Eigen::MatrixXd;                  // variable size matrix, double precision
 using Eigen::MatrixXi;                  // variable size matrix, integer
 using Eigen::Map;                       // 'map' rather than copy
+using Eigen::VectorXd;                  // variable size vector, double precision
 
 using std::string;
 
 /*!
-* \fn template wrapper to run a matrix factorization algorithm based on the
-* hierarchical Gamma Poisson factor model (and derivatives)
-* in its sparse version (over factor V)
-*
-* \tparam model the statistical model considered for the inference framework
-* \tparam algo an inference/optimization algorithm
-*
-* \param X a count data matrix of dimension \code{n x p}.
-* \param K integer, required dimension of the subspace for the latent
-* representation.
-* \param sel_bound real value in [0,1] used to threshold sparsity probabilities
-* for factor V
-* \param U matrix of dimension \code{n x K}, initial values for the factor
-* matrix \code{U}. It is used to intialized the variational parameter of the
-* varitional distribution over the factor \code{U}. Default is NULL and
-* variational parameters over \code{U} are intialized otherwise.
-* Note: if you supply \code{U} input parameter, you should supply
-* \code{V} input parameter.
-* \param V matrix of dimension \code{p x K}, initial values for the factor
-* matrix \code{V}. It is used to intialized the variational parameter of the
-* varitional distribution over the factor \code{V}. Default is NULL and
-* variational parameters over \code{V} are intialized otherwise.
-* Note: if you supply \code{V} input parameter, you should supply
-* \code{U} input parameter.
-* \param verbose boolean indicating verbosity. Default is True.
-* \param monitor boolean indicating if model related measures
-* (log-likelihood, deviance, Bregman divergence between \eqn{X}
-* and \eqn{UV^t}) should be computed. Default is True.
-* \param iter_max integer, maximum number of iterations after which the
-* optimization is stopped even when the algorithm did not converge.
-* Default is 1000.
-* \param iter_min integer, minimum number of iterations without checking
-* convergence. Default is 500.
-* \param init_mode string, intialization mode to choose between "random",
-* "nmf". Default value is "random". Unused if initial values are given
-* for U and V or a1, a2, b1 and b2.
-* \param epsilon double precision parameter to assess convergence, i.e.
-* the convergence is reached when the gap (absolute or normalized) between
-* two iterates becomes smaller than epsilon. Default is 1e-2.
-* \param additional_iter integer, number of successive iterations during
-* which the convergence criterion should be verified to assess convergence.
-* \param conv_mode \{0,1,2\}-valued indicator setting how to assess
-* convergence: 0 for absolute gap, 1 for normalized gap between
-* two iterates and 2 for custom criterion (depends on the considered
-* method/model). Default is 1.
-* \param ninit integer, number of initialization to consider. In multiple
-* initialization mode (>1), the algorithm is run for \code{iter_init}
-* iterations with mutliple seeds and the best one (regarding the optimization
-* criterion) is kept. Default value is 1.
-* \param iter_init integer, number of iterations during which the algorithms is
-* run in multi-initialization mode. Default value is 100.
-* \param ncores integer indicating the number of cores to use for
-* parallel computation. Default is 1 and no multi-threading is used.
-* \param reorder_factor boolean indicating if factors should be reordered
-* according to the model-related deviance criterion. Default value is True.
-* \param seed positive integer, seed value for random number generator.
-* Default is NULL and the seed is set based on the current time.
-* \param a1 matrix of dimension \code{n x K}, initial values for the
-* variational shape parameter of the Gamma variational distribution over the
-* factor \code{U}. Default is NULL and each row \code{i} in \code{a1} is
-* randomly initialized from a Gamma distribution of parameters
-* \code{(1,K/mean(X)_i)} where \code{mean(X)_i} is the rowwise mean of
-* the corresponding row in the input data matrix \code{X}.
-* This input parameter is not used if the input parameter \code{U} is not NULL.
-* \param a2 matrix of dimension \code{n x K}, initial values for the
-* variational rate parameter of the Gamma variational distribution over the
-* factor \code{U}. Default is NULL and \code{a2} is intialized with
-* a matrix of 1. This input parameter is not used if the input
-* parameter \code{U} is not NULL.
-* \param b1 matrix of dimension \code{p x K}, initial values for the
-* variational shape parameter of the Gamma variational distribution over the
-* factor \code{V}. Default is NULL and each row \code{j} in \code{b1} is
-* randomly initialized from a Gamma distribution of parameters
-* \code{(1,K/mean(X)_j)} where \code{mean(X)_j} is the colwise mean of
-* the corresponding column in the input data matrix \code{X}.
-* This input parameter is not used if the input parameter \code{V} is not NULL.
-* \param a2 matrix of dimension \code{p x K}, initial values for the
-* variational rate parameter of the Gamma variational distribution over the
-* factor \code{V}. Default is NULL and \code{a2} is intialized with
-* a matrix of 1. This input parameter is not used if the input
-* parameter \code{V} is not NULL.
-* \param alpha1 matrix of dimension \code{n x K}, initial values for the
-* prior shape parameter of the Gamma variational distribution over the
-* factor \code{U}. Default is NULL and \code{alpha1} is initialized based
-* on update rules derived in Durif et al. (2018). This input parameter is
-* not used if the input parameter \code{U} is not NULL.
-* \param alpha2 matrix of dimension \code{n x K}, initial values for the
-* prior rate parameter of the Gamma variational distribution over the
-* factor \code{U}. Default is NULL and \code{alpha2} is initialized based
-* on update rules derived in Durif et al. (2018). This input parameter is
-* not used if the input parameter \code{U} is not NULL.
-* \param beta1 matrix of dimension \code{p x K}, initial values for the
-* prior shape parameter of the Gamma variational distribution over the
-* factor \code{V}. Default is NULL and \code{beta1} is initialized based
-* on update rules derived in Durif et al. (2018). This input parameter is
-* not used if the input parameter \code{U} is not NULL.
-* \param beta2 matrix of dimension \code{p x K}, initial values for the
-* prior rate parameter of the Gamma variational distribution over the
-* factor \code{V}. Default is NULL and \code{beta2} is initialized based
-* on update rules derived in Durif et al. (2018). This input parameter is
-* not used if the input parameter \code{U} is not NULL.
-*
-* Note: input parameters \code{a1}, \code{a2}, \code{b1}, \code{b2} should
-* be all set to be used.
-*/
+ * \fn template wrapper to run a matrix factorization algorithm based on the
+ * hierarchical Gamma Poisson factor model (and derivatives)
+ * in its sparse version (over factor V)
+ *
+ * \tparam model the statistical model considered for the inference framework
+ * \tparam algo an inference/optimization algorithm
+ *
+ * \param X a count data matrix of dimension \code{n x p}.
+ * \param K integer, required dimension of the subspace for the latent
+ * representation.
+ * \param sel_bound real value in [0,1] used to threshold sparsity probabilities
+ * for factor V
+ * \param U matrix of dimension \code{n x K}, initial values for the factor
+ * matrix \code{U}. It is used to intialized the variational parameter of the
+ * varitional distribution over the factor \code{U}. Default is NULL and
+ * variational parameters over \code{U} are intialized otherwise.
+ * Note: if you supply \code{U} input parameter, you should supply
+ * \code{V} input parameter.
+ * \param V matrix of dimension \code{p x K}, initial values for the factor
+ * matrix \code{V}. It is used to intialized the variational parameter of the
+ * varitional distribution over the factor \code{V}. Default is NULL and
+ * variational parameters over \code{V} are intialized otherwise.
+ * Note: if you supply \code{V} input parameter, you should supply
+ * \code{U} input parameter.
+ * \param verbose boolean indicating verbosity. Default is True.
+ * \param monitor boolean indicating if model related measures
+ * (log-likelihood, deviance, Bregman divergence between \eqn{X}
+ * and \eqn{UV^t}) should be computed. Default is True.
+ * \param iter_max integer, maximum number of iterations after which the
+ * optimization is stopped even when the algorithm did not converge.
+ * Default is 1000.
+ * \param iter_min integer, minimum number of iterations without checking
+ * convergence. Default is 500.
+ * \param init_mode string, intialization mode to choose between "random",
+ * "nmf". Default value is "random". Unused if initial values are given
+ * for U and V or a1, a2, b1 and b2.
+ * \param epsilon double precision parameter to assess convergence, i.e.
+ * the convergence is reached when the gap (absolute or normalized) between
+ * two iterates becomes smaller than epsilon. Default is 1e-2.
+ * \param additional_iter integer, number of successive iterations during
+ * which the convergence criterion should be verified to assess convergence.
+ * \param conv_mode \{0,1,2\}-valued indicator setting how to assess
+ * convergence: 0 for absolute gap, 1 for normalized gap between
+ * two iterates and 2 for custom criterion (depends on the considered
+ * method/model). Default is 1.
+ * \param ninit integer, number of initialization to consider. In multiple
+ * initialization mode (>1), the algorithm is run for \code{iter_init}
+ * iterations with mutliple seeds and the best one (regarding the optimization
+ * criterion) is kept. Default value is 1.
+ * \param iter_init integer, number of iterations during which the algorithms is
+ * run in multi-initialization mode. Default value is 100.
+ * \param ncores integer indicating the number of cores to use for
+ * parallel computation. Default is 1 and no multi-threading is used.
+ * \param reorder_factor boolean indicating if factors should be reordered
+ * according to the model-related deviance criterion. Default value is True.
+ * \param seed positive integer, seed value for random number generator.
+ * Default is NULL and the seed is set based on the current time.
+ * \param a1 matrix of dimension \code{n x K}, initial values for the
+ * variational shape parameter of the Gamma variational distribution over the
+ * factor \code{U}. Default is NULL and each row \code{i} in \code{a1} is
+ * randomly initialized from a Gamma distribution of parameters
+ * \code{(1,K/mean(X)_i)} where \code{mean(X)_i} is the rowwise mean of
+ * the corresponding row in the input data matrix \code{X}.
+ * This input parameter is not used if the input parameter \code{U} is not NULL.
+ * \param a2 matrix of dimension \code{n x K}, initial values for the
+ * variational rate parameter of the Gamma variational distribution over the
+ * factor \code{U}. Default is NULL and \code{a2} is intialized with
+ * a matrix of 1. This input parameter is not used if the input
+ * parameter \code{U} is not NULL.
+ * \param b1 matrix of dimension \code{p x K}, initial values for the
+ * variational shape parameter of the Gamma variational distribution over the
+ * factor \code{V}. Default is NULL and each row \code{j} in \code{b1} is
+ * randomly initialized from a Gamma distribution of parameters
+ * \code{(1,K/mean(X)_j)} where \code{mean(X)_j} is the colwise mean of
+ * the corresponding column in the input data matrix \code{X}.
+ * This input parameter is not used if the input parameter \code{V} is not NULL.
+ * \param a2 matrix of dimension \code{p x K}, initial values for the
+ * variational rate parameter of the Gamma variational distribution over the
+ * factor \code{V}. Default is NULL and \code{a2} is intialized with
+ * a matrix of 1. This input parameter is not used if the input
+ * parameter \code{V} is not NULL.
+ * \param alpha1 matrix of dimension \code{n x K}, initial values for the
+ * prior shape parameter of the Gamma variational distribution over the
+ * factor \code{U}. Default is NULL and \code{alpha1} is initialized based
+ * on update rules derived in Durif et al. (2018). This input parameter is
+ * not used if the input parameter \code{U} is not NULL.
+ * \param alpha2 matrix of dimension \code{n x K}, initial values for the
+ * prior rate parameter of the Gamma variational distribution over the
+ * factor \code{U}. Default is NULL and \code{alpha2} is initialized based
+ * on update rules derived in Durif et al. (2018). This input parameter is
+ * not used if the input parameter \code{U} is not NULL.
+ * \param beta1 matrix of dimension \code{p x K}, initial values for the
+ * prior shape parameter of the Gamma variational distribution over the
+ * factor \code{V}. Default is NULL and \code{beta1} is initialized based
+ * on update rules derived in Durif et al. (2018). This input parameter is
+ * not used if the input parameter \code{U} is not NULL.
+ * \param beta2 matrix of dimension \code{p x K}, initial values for the
+ * prior rate parameter of the Gamma variational distribution over the
+ * factor \code{V}. Default is NULL and \code{beta2} is initialized based
+ * on update rules derived in Durif et al. (2018). This input parameter is
+ * not used if the input parameter \code{U} is not NULL.
+ * \param prob_S matrix of dimension \code{p x K}, initial values for the
+ * variational probability parameter for the sparsity indicator matrix \code{S}
+ * over the factor \code{V}. Default is NULL and \code{prob_S} is initialized
+ * randomly.
+ * \param prior_S vector of length \code{p}, initial values for the
+ * prior probability parameter for the sparsity indicator matrix \code{S} over
+ * the factor \code{V}. Default is NULL and \code{prior_S} is initialized
+ * randomly.
+ * \param prob_D matrix of dimension \code{n x p}, initial values for the
+ * variational probability parameter for the drop-out indicator matrix \code{D}
+ * accounting for zero-inflation in \code{X}. Default is NULL
+ * and \code{prob_D} is initialized by the frequence of zero in the
+ * corresponding column of \code{X}. This parameter is not used for model
+ * without zero-inflation.
+ * \param prior_D vector of length \code{p}, initial values for the
+ * prior probability parameter for the drop-out indicator matrix \code{D}
+ * accounting for zero-inflation in \code{X}. Default is NULL and
+ * \code{prior_D} is initialized by the frequence of zero in the
+ * corresponding column of \code{X}. This parameter is not used for model
+ * without zero-inflation.
+ *
+ * Note: input parameters \code{a1}, \code{a2}, \code{b1}, \code{b2} should
+ * be all set to be used.
+ */
 template <class model, template<typename> class algo>
 SEXP wrapper_sparse_gap_factor(SEXP X, int K, double sel_bound,
                                Rcpp::Nullable<MatrixXd> U = R_NilValue,
@@ -169,7 +192,11 @@ SEXP wrapper_sparse_gap_factor(SEXP X, int K, double sel_bound,
                                Rcpp::Nullable<MatrixXd> alpha1 = R_NilValue,
                                Rcpp::Nullable<MatrixXd> alpha2 = R_NilValue,
                                Rcpp::Nullable<MatrixXd> beta1 = R_NilValue,
-                               Rcpp::Nullable<MatrixXd> beta2 = R_NilValue) {
+                               Rcpp::Nullable<MatrixXd> beta2 = R_NilValue,
+                               Rcpp::Nullable<MatrixXd> prob_S = R_NilValue,
+                               Rcpp::Nullable<VectorXd> prior_S = R_NilValue,
+                               Rcpp::Nullable<MatrixXd> prob_D = R_NilValue,
+                               Rcpp::Nullable<VectorXd> prior_D = R_NilValue) {
 
     MatrixXd Xin;
     MatrixXd Uin;
@@ -182,6 +209,10 @@ SEXP wrapper_sparse_gap_factor(SEXP X, int K, double sel_bound,
     MatrixXd alpha2in;
     MatrixXd beta1in;
     MatrixXd beta2in;
+    MatrixXd prob_Sin;
+    MatrixXd prior_Sin;
+    MatrixXd prob_Din;
+    MatrixXd prior_Din;
 
     std::string init_mode_st = Rcpp::as<std::string>(init_mode);
 
@@ -248,6 +279,26 @@ SEXP wrapper_sparse_gap_factor(SEXP X, int K, double sel_bound,
         }
     }
 
+    if(prob_S.isNotNull() && prior_S.isNotNull()) {
+        prob_Sin = Rcpp::as< Map<MatrixXd> >(prob_S);
+        prior_Sin = Rcpp::as< Map<VectorXd> >(prior_S);
+
+        // Rcpp::Rcout << "prob_S dim = = " << prob_Sin.rows() << ", " << prob_Sin.cols() << std::endl;
+        // Rcpp::Rcout << "prior_S size = " << prior_Sin.size() << std::endl;
+
+        if((prob_Sin.rows() != p) || (prob_Sin.cols() != K) || (prior_Sin.size() != p)) {
+            Rcpp::stop("Wrong dimension for prob_S and/or prior_S input matrix/vector");
+        }
+    }
+
+    if(prob_D.isNotNull() && prior_D.isNotNull()) {
+        prob_Din = Rcpp::as< Map<MatrixXd> >(prob_D);
+        prior_Din = Rcpp::as< Map<VectorXd> >(prior_D);
+        if((prob_Din.rows() != n) || (prob_Din.cols() != p) || (prior_Din.size() != p)) {
+            Rcpp::stop("Wrong dimension for prob_D and/or prior_D input matrix/vector");
+        }
+    }
+
     // parallelizing
 #if defined(_OPENMP)
     omp_set_num_threads(ncores);
@@ -286,7 +337,16 @@ SEXP wrapper_sparse_gap_factor(SEXP X, int K, double sel_bound,
 
         for(int nrun=0; nrun<ninit; nrun++) {
             if(verbose) Rcpp::Rcout << "Run " << nrun << std::endl;
-            tmp_model.init_sparse_param_gap(sel_bound, rng);
+            if(prob_S.isNotNull() && prior_S.isNotNull()) {
+                tmp_model.init_sparse_param_gap(sel_bound, prob_Sin, prior_Sin);
+            } else {
+                tmp_model.init_sparse_param_gap(sel_bound, rng);
+            }
+            if(prob_D.isNotNull() && prior_D.isNotNull()) {
+                tmp_model.init_zi_param_gap(prob_Din, prior_Din);
+            } else {
+                tmp_model.init_zi_param_gap();
+            }
             if(U.isNotNull() && V.isNotNull()) {
                 tmp_model.init(Uin, Vin);
                 tmp_model.perturb_param(rng, std::max(Uin.maxCoeff(), Vin.maxCoeff())/K);
@@ -327,7 +387,16 @@ SEXP wrapper_sparse_gap_factor(SEXP X, int K, double sel_bound,
         my_model.set_verbosity(verbose);
 
     } else {
-        my_model.init_sparse_param_gap(sel_bound, rng);
+        if(prob_S.isNotNull() && prior_S.isNotNull()) {
+            my_model.init_sparse_param_gap(sel_bound, prob_Sin, prior_Sin);
+        } else {
+            my_model.init_sparse_param_gap(sel_bound, rng);
+        }
+        if(prob_D.isNotNull() && prior_D.isNotNull()) {
+            my_model.init_zi_param_gap(prob_Din, prior_Din);
+        } else {
+            my_model.init_zi_param_gap();
+        }
         if(U.isNotNull() && V.isNotNull()) {
             my_model.init(Uin, Vin);
         } else if(a1.isNotNull() && a2.isNotNull() && b1.isNotNull() && b2.isNotNull()) {
