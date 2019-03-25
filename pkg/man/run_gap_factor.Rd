@@ -4,12 +4,13 @@
 \alias{run_gap_factor}
 \title{run_gap_factor}
 \usage{
-run_gap_factor(X, K, U = NULL, V = NULL, verbose = TRUE, monitor = TRUE,
-  iter_max = 1000L, iter_min = 500L, init_mode = "random",
-  epsilon = 0.01, additional_iter = 10L, conv_mode = 1L, ninit = 1L,
-  iter_init = 100L, ncores = 1L, reorder_factor = TRUE, seed = NULL,
-  a1 = NULL, a2 = NULL, b1 = NULL, b2 = NULL, alpha1 = NULL,
-  alpha2 = NULL, beta1 = NULL, beta2 = NULL)
+run_gap_factor(X, K, U = NULL, V = NULL, verbose = TRUE,
+  monitor = TRUE, iter_max = 1000L, iter_min = 500L,
+  init_mode = "random", epsilon = 0.01, additional_iter = 10L,
+  conv_mode = 1L, ninit = 1L, iter_init = 100L, ncores = 1L,
+  reorder_factor = TRUE, seed = NULL, a1 = NULL, a2 = NULL,
+  b1 = NULL, b2 = NULL, alpha1 = NULL, alpha2 = NULL,
+  beta1 = NULL, beta2 = NULL)
 }
 \arguments{
 \item{X}{a count data matrix of dimension \code{n x p}.}

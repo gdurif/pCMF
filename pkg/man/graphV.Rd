@@ -4,8 +4,8 @@
 \alias{graphV}
 \title{graphV}
 \usage{
-graphV(model, axes = c(1, 2), labels = NULL, log_representation = TRUE,
-  edit_theme = TRUE, graph = TRUE)
+graphV(model, axes = c(1, 2), labels = NULL,
+  log_representation = TRUE, edit_theme = TRUE, graph = TRUE)
 }
 \arguments{
 \item{model}{model a Gamma-Poisson factor model output by the

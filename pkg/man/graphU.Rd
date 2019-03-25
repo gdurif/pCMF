@@ -4,8 +4,8 @@
 \alias{graphU}
 \title{graphU}
 \usage{
-graphU(model, axes = c(1, 2), labels = NULL, log_representation = TRUE,
-  edit_theme = TRUE, graph = TRUE)
+graphU(model, axes = c(1, 2), labels = NULL,
+  log_representation = TRUE, edit_theme = TRUE, graph = TRUE)
 }
 \arguments{
 \item{model}{model a Gamma-Poisson factor model output by the

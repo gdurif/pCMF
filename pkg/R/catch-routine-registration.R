@@ -32,6 +32,8 @@
 #'
 #' @author Hadley Wickham; RStudio
 #'
+#' @export
+#'
 (function() {
     .Call("run_testthat_tests", PACKAGE = "pCMF")
 })

@@ -5,11 +5,12 @@
 \title{run_zi_sparse_gap_factor}
 \usage{
 run_zi_sparse_gap_factor(X, K, sel_bound = 0.5, U = NULL, V = NULL,
-  verbose = TRUE, monitor = TRUE, iter_max = 1000L, iter_min = 500L,
-  init_mode = "random", epsilon = 0.01, additional_iter = 10L,
-  conv_mode = 1L, ninit = 1L, iter_init = 100L, ncores = 1L,
-  reorder_factor = TRUE, seed = NULL, a1 = NULL, a2 = NULL, b1 = NULL,
-  b2 = NULL, alpha1 = NULL, alpha2 = NULL, beta1 = NULL, beta2 = NULL,
+  verbose = TRUE, monitor = TRUE, iter_max = 1000L,
+  iter_min = 500L, init_mode = "random", epsilon = 0.01,
+  additional_iter = 10L, conv_mode = 1L, ninit = 1L,
+  iter_init = 100L, ncores = 1L, reorder_factor = TRUE,
+  seed = NULL, a1 = NULL, a2 = NULL, b1 = NULL, b2 = NULL,
+  alpha1 = NULL, alpha2 = NULL, beta1 = NULL, beta2 = NULL,
   prob_S = NULL, prior_S = NULL, prob_D = NULL, prior_D = NULL)
 }
 \arguments{

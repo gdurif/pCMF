@@ -5,9 +5,10 @@
 \title{run_poisson_nmf}
 \usage{
 run_poisson_nmf(X, K, U = NULL, V = NULL, verbose = TRUE,
-  monitor = TRUE, iter_max = 1000L, iter_min = 500L, epsilon = 0.01,
-  additional_iter = 10L, conv_mode = 1L, ninit = 1L, iter_init = 100L,
-  ncores = 1L, reorder_factor = TRUE, seed = NULL)
+  monitor = TRUE, iter_max = 1000L, iter_min = 500L,
+  epsilon = 0.01, additional_iter = 10L, conv_mode = 1L,
+  ninit = 1L, iter_init = 100L, ncores = 1L, reorder_factor = TRUE,
+  seed = NULL)
 }
 \arguments{
 \item{X}{a count data matrix of dimension \code{n x p}.}
