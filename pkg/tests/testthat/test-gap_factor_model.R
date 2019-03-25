@@ -32,7 +32,7 @@ test_that("pCMF with standard GaP factor model unit tests", {
     ## check standard run
     res <- run_gap_factor(X, K)
 
-    expect_true(class(res) == "pCMF")
+    expect_true(class(res) %in% c("pCMF","spCMF"))
 
     expect_true(is.list(res))
     expect_true(is.list(res$factor))
@@ -172,7 +172,7 @@ test_that("pCMF with standard ZI GaP factor model unit tests", {
     ## check standard run
     res <- run_zi_gap_factor(X, K)
 
-    expect_true(class(res) == "pCMF")
+    expect_true(class(res) %in% c("pCMF","spCMF"))
 
     expect_true(is.list(res))
     expect_true(is.list(res$factor))
@@ -334,7 +334,7 @@ test_that("pCMF with sparse GaP factor model unit tests", {
     ## check standard run
     res <- run_sparse_gap_factor(X, K)
 
-    expect_true(class(res) == "pCMF")
+    expect_true(class(res) %in% c("pCMF","spCMF"))
 
     expect_true(is.list(res))
     expect_true(is.list(res$factor))
@@ -499,7 +499,7 @@ test_that("pCMF with ZI sparse GaP factor model unit tests", {
     ## check standard run
     res <- run_zi_sparse_gap_factor(X, K)
 
-    expect_true(class(res) == "pCMF")
+    expect_true(class(res) %in% c("pCMF","spCMF"))
 
     expect_true(is.list(res))
     expect_true(is.list(res$factor))

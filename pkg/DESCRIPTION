@@ -1,8 +1,8 @@
 Package: pCMF
 Type: Package
 Title: Probabilistic Factorization of Count Matrices
-Version: 1.2
-Date: 2019-01-09
+Version: 1.2.1
+Date: 2019-03-25
 Author: Ghislain Durif
 Maintainer: Ghislain Durif <gd.dev@libertymail.net>
 Description: Routines for probabilistic count matrices factorization (pCMF). 

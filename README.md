@@ -1,5 +1,7 @@
 # R-package pCMF
 
+Copyright 2019 Ghislain Durif. The pCMF package is available under the GPL-v2 license.
+
 ## Description
 
 The pCMF package contains mplementation of the probabilistic Count 
@@ -10,14 +12,14 @@ potential drop-out events (also called zero-inflation) such as gene expression
 profiles from single cells data (scRNA-seq) obtained by high throughput
 sequencing.
 
-In this framework, we consider a count data matrix $`X`$ with $`n`$ rows being 
-individuals (e.g. cells in single-cell data) and $`p`$ columns being recorded
+In this framework, we consider a count data matrix $X$ with $n$ rows being 
+individuals (e.g. cells in single-cell data) and $p$ columns being recorded
 variables (e.g. gene expression in scRNA-seq data).
 
 The pCMF approach uses matrix factorization to jointly construct a 
 representation of individuals (cells) and variables (genes) in a low 
-dimensional space, respectively the matrices $`U`$ of dimension $`n \times K`$ 
-and $`V`$ of dimension $`p \times K`$ where $`K`$ is the dimension of this 
+dimensional space, respectively the matrices $U$ of dimension $n \times K$ 
+and $V$ of dimension $p \times K$ where $K$ is the dimension of this 
 latent space. This representation can be used for data visualization 
 (c.f. example below). Our method can also be used as a preliminary dimension 
 reduction step before clustering.
@@ -25,19 +27,19 @@ reduction step before clustering.
 ## Details
 
 In the probabilistic Count Matrix Factorization framework (pCMF), the count 
-data matrix $`X`$ (of dimension $`n \times p`$) is approximated by a matrix 
-product $`U V^t`$ where $`U_{n\times K}`$ and $`V_{p\times K}`$ respectively 
-represent the individuals (rows of $`X`$) and variables (columns of $`X`$)
-in a sub-space of dimension $`K`$.
+data matrix $X$ (of dimension $n \times p$) is approximated by a matrix 
+product $U V^t$ where $U_{n\times K}$ and $V_{p\times K}$ respectively 
+represent the individuals (rows of $X$) and variables (columns of $X$)
+in a sub-space of dimension $K$.
 
-In the pCMF framework, the approximation between $`X`$ and $`U V^t`$ is made 
+In the pCMF framework, the approximation between $X$ and $U V^t$ is made 
 regarding the Bregman divergence (generalization of Euclidean distance to 
-non-Gaussian data) derived from the model $`X \sim P(U V^t)`$, i.e. each 
-entry $`X_{ij}`$ is assumed to follow a Poisson distribution of 
-parameter $`\sum_k U_{ik} V_{jk}`$. In addition, we consider a hierarchical 
-model with prior distributions on factors $`U`$ and $`V`$. Our probabilistic 
+non-Gaussian data) derived from the model $X \sim P(U V^t)$, i.e. each 
+entry $X_{ij}$ is assumed to follow a Poisson distribution of 
+parameter $\sum_k U_{ik} V_{jk}$. In addition, we consider a hierarchical 
+model with Gamma prior distributions on factors $U$ and $V$. Our probabilistic 
 model is able to account for zero-inflation (potential drop-out events) in 
-the data matrix $`X`$ and/or for sparsity in the factor matrix $`V`$.
+the data matrix $X$ and/or for sparsity in the factor matrix $V$.
 
 More details regarding pCMF can be found in Durif et al. (2019).
 
@@ -48,7 +50,7 @@ Probabilistic Count Matrix Factorization for Single Cell Expression Data
 Analysis. arXiv:1710.11028 [stat].
 
 All codes used to run experiments on pCMF in the paper are 
-available at <https://gitlab.inria.fr/gdurif/pCMF_experiments>.
+available at <https://github.com/gdurif/pCMF_experiments>.
 
 
 ---
@@ -59,12 +61,12 @@ available at <https://gitlab.inria.fr/gdurif/pCMF_experiments>.
 
 You can install the `pCMF` R package with the following R command:
 ```R
-devtools::install_git("https://gitlab.inria.fr/gdurif/pCMF", subdir="pkg", branch="prod")
+devtools::install_git("https://gitlab.inria.fr/gdurif/pCMF", subdir="pkg", ref="prod")
 ```
 
 If you don't have OpenMP installed on your machine (for instance on MacOS), you can run the following command:
 ```R
-devtools::install_git("https://gitlab.inria.fr/gdurif/pCMF", subdir="pkg", branch="prod_no_omp")
+devtools::install_git("https://gitlab.inria.fr/gdurif/pCMF", subdir="pkg", ref="prod_no_omp")
 ```
 **Note:** We encourage you to install a compiler (e.g. gcc) that supports OpenMP in order 
 to benefit from multi-core computing and improve computation performance.
@@ -74,13 +76,13 @@ To install the `devtools` package, you can run:
 install.packages("devtools")
 ```
 
-You can also use the git repository available at <https://gitlab.inria.fr/gdurif/pCMF.git>, 
+You can also use the git repository available at <https://github.com/gdurif/pCMF.git>, 
 then build and install the package with Rstudio (the [project file](./pCMF.Rproj) 
 is set accordingly) or with the R command line tools.
 
 To clone the repository, you can do:
 ```bash
-git clone https://gitlab.inria.fr/gdurif/pCMF.git
+git clone https://github.com/gdurif/pCMF.git
 ```
 **Note:** if you don't have OpenMP on your system (c.f. previously), after cloning
 the repository, you should do:
@@ -98,7 +100,6 @@ devtools::install("/path/to/pCMF/pkg") # you should edit the path
 ### Example of use
 
 * Import the library
-
 ```R
 library(pCMF)
 ```
@@ -110,52 +111,67 @@ library(pCMF)
 * **Simulations** of data based on the generative model associated to our 
   approach. See Durif et al. (2017, Appendix) for more details about our 
   data generation process. Here, we generate 3 groups of individuals 
-  (structured by $`U`$), 2 groups of genes with 40% of noisy genes 
-  (structured by $`V`$). We add a level of 50% of drop-out events in the data.
-  
+  (structured by $U$), 2 groups of genes with 40% of noisy genes 
+  (structured by $V$). We add a level of 50% of drop-out events in the data.
 
 ```R
 ## generate data
+set.seed(250)
 n <- 100
-p <- 200
-K <- 10
-factorU <- generate_factor_matrix(n, K, ngroup=3, average_signal=60,
+p <- 500
+K <- 20
+factorU <- generate_factor_matrix(n, K, ngroup=2,
+                                  average_signal=120,
                                   group_separation=0.8,
-                                  distribution="gamma",
+                                  distribution="exponential",
                                   shuffle_feature=TRUE)
-factorV <- generate_factor_matrix(p, K, ngroup=2, average_signal=60,
+factorV <- generate_factor_matrix(p, K, ngroup=2, average_signal=120,
                                   group_separation=0.8,
-                                  distribution="gamma",
+                                  distribution="exponential",
                                   shuffle_feature=TRUE,
-                                  prop_noise_feature=0.4,
-                                  noise_level=0.5)
+                                  prop_noise_feature=0.6)
 U <- factorU$factor_matrix
 V <- factorV$factor_matrix
 count_data <- generate_count_matrix(n, p, K, U, V,
-                                    ZI=TRUE, prob1=rep(0.5,p))
+                                    ZI=TRUE, prob1=rep(0.4,p))
 X <- count_data$X
 ## or use your own data as a count matrix
 ## of dimension cells x genes (individuals x features)
 ```
 
 * Heatmap of the count data matrix:
-
 ```R
 matrix_heatmap(X)
 ```
 
-* Apply the pCMF approach on the data with $`K=2`$
+* Pre-filtering of the variables (genes)
+```R
+kept_cols <- prefilter(X, prop = 0.05, quant_max = 0.95, 
+                       presel = TRUE, threshold = 0.2)
+```
 
+To save computation time, you can use the variance-based heuristic for 
+variable/gene pre-selection:
+```R
+kept_cols <- prefilter(X, prop = 0.05, quant_max = 0.95,
+                       presel = TRUE, threshold = 0.2)
+```
+
+Remove variables that were filtered out:
+```R
+X <- X[,kept_cols]
+```
+
+* Apply the pCMF approach on the data with $K=2$
 ```R
 ## run pCMF algorithm
 res1 <- pCMF(X, K=2, verbose=FALSE, zero_inflation = TRUE, 
-             sparsity = TRUE, ncores=8)
+             sparsity = TRUE, ncores=8) # edit nb of cores
 ```
 
-* Check which variables (genes) that contribute to the low-dimensional 
-  representation (non-null entries in $`V`$), and re-apply the method with this 
+* Check which variables (genes) contribute to the low-dimensional 
+  representation (non-null entries in $V$), and re-apply the method with this 
   genes:
-
 ```R
 ## estimated probabilities
 matrix_heatmap(res1$sparse_param$prob_S)
@@ -167,18 +183,16 @@ res2 <- pCMF(X[,res1$sparse_param$prior_prob_S>0],
              sparsity = FALSE, ncores=8)
 ```
 
-* Get estimated factor matrices: $`\hat{U}`$ and $`\hat{V}`$ can be used for 
+* Get estimated factor matrices: $\hat{U}$ and $\hat{V}$ can be used for 
   clustering of individuals (cells) or variables (genes):
-
 ```R
-hatU <- getU(res)
-hatV <- getV(res)
+hatU <- getU(res2)
+hatV <- getV(res2)
 ```
 
 * **Data visualization**:
 
   1. Individuals (cells):
-
 ```R
 ## individual representation 
 graphU(res2, axes=c(1,2), labels=factorU$feature_label)
@@ -186,12 +200,20 @@ graphU(res2, axes=c(1,2), labels=factorU$feature_label)
 
 ![](./figs/individuals.png)
 
-  2. Variables (genes):
+  2. Variables (genes), sparse representation:
+```R
+## variable representation (0 are noise variables)
+graphV(res1, axes=c(1,2), 
+       labels=factorV$feature_label)
+```
 
+![](./figs/variables_sparse.png)
+
+  3. Variables (genes), representation after gene selection:
 ```R
 ## variable representation (0 are noise variables)
 graphV(res2, axes=c(1,2), 
-       labels=factorV$feature_label[res1$sparse_param$prior_prob_S>0])
+       labels=factorV$feature_label[kept_cols][res1$sparse_param$prior_prob_S>0])
 ```
 
 ![](./figs/variables.png)

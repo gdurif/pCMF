@@ -88,7 +88,7 @@ getU <- function(model, log_representation=TRUE) {
 
     if(class(model) == "NMF") {
         U <- as.matrix(model$factor$U)
-    } else if(class(model) == "pCMF") {
+    } else if(class(model) %in% c("pCMF", "spCMF")) {
         if(log_representation) {
             U <- apply(as.matrix(model$stats$EU), c(1,2), function(x) return(log(x+1E-5)))
         } else {
@@ -172,11 +172,14 @@ getV <- function(model, log_representation=TRUE) {
 
     if(class(model) == "NMF") {
         V <- as.matrix(model$factor$V)
-    } else if(class(model) == "pCMF") {
+    } else if(class(model) %in% c("pCMF", "spCMF")) {
         if(log_representation) {
             V <- apply(as.matrix(model$stats$EV), c(1,2), function(x) return(log(x+1)))
         } else {
             V <- as.matrix(model$stats$EV)
+        }
+        if(class(model) == "spCMF") {
+            V <- V * model$sparse_param$prob_S
         }
     } else {
         stop("wrong model in input")

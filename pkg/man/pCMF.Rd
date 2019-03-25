@@ -5,8 +5,9 @@
 \title{pCMF}
 \usage{
 pCMF(X, K, zero_inflation = TRUE, sparsity = TRUE, sel_bound = 0.5,
-  verbose = TRUE, monitor = TRUE, iter_max = 1000, ninit = 1,
-  iter_init = 100, ncores = 1, reorder_factor = TRUE, seed = NULL)
+  verbose = TRUE, monitor = TRUE, iter_max = 1000, iter_min = NULL,
+  ninit = 1, iter_init = 100, ncores = 1, reorder_factor = TRUE,
+  seed = NULL)
 }
 \arguments{
 \item{X}{a count data matrix of dimension \code{n x p}.}
@@ -38,6 +39,9 @@ and \eqn{UV^t}) should be computed. Default is TRUE.}
 \item{iter_max}{integer, maximum number of iterations after which the
 optimization is stopped even when the algorithm did not converge.
 Default is 1000.}
+
+\item{iter_min}{integer, minimum number of iterations enforced even if the
+the algorithm converge. Default is NULL, and \code{iter_max/2} is used.}
 
 \item{ninit}{integer, number of initialization to consider. In multiple
 initialization mode (>1), the algorithm is run for \code{iter_init}
@@ -117,25 +121,30 @@ null entries in \code{$sparse_param$prior_prob_S}).
 \dontrun{
 ## generate data
 n <- 100
-p <- 200
-K <- 10
-factorU <- generate_factor_matrix(n, K, ngroup=3, average_signal=60,
+p <- 500
+K <- 20
+factorU <- generate_factor_matrix(n, K, ngroup=3,
+                                  average_signal=c(250,100,250),
                                   group_separation=0.8,
-                                  distribution="gamma",
+                                  distribution="exponential",
                                   shuffle_feature=TRUE)
-factorV <- generate_factor_matrix(p, K, ngroup=2, average_signal=60,
+factorV <- generate_factor_matrix(p, K, ngroup=2, average_signal=80,
                                   group_separation=0.8,
-                                  distribution="gamma",
+                                  distribution="exponential",
                                   shuffle_feature=TRUE,
-                                  prop_noise_feature=0.4,
-                                  noise_level=0.5)
+                                  prop_noise_feature=0.6)
 U <- factorU$factor_matrix
 V <- factorV$factor_matrix
 count_data <- generate_count_matrix(n, p, K, U, V,
-                                    ZI=TRUE, prob1=rep(0.5,p))
+                                    ZI=TRUE, prob1=rep(0.3,p))
 X <- count_data$X
 ## or use your own data as a count matrix
 ## of dimension cells x genes (individuals x features)
+
+## pre-filtering
+kept_cols <- prefilter(X, prop = 0.05, quant_max = 0.95,
+                       presel = TRUE, threshold = 0.2)
+X <- X[,kept_cols]
 ## run pCMF algorithm
 res <- pCMF(X, K, verbose=FALSE, zero_inflation = TRUE, sparsity = TRUE)
 ## rerun with genes that contributes

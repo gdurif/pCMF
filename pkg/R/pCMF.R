@@ -133,6 +133,8 @@ NULL
 #' @param iter_max integer, maximum number of iterations after which the
 #' optimization is stopped even when the algorithm did not converge.
 #' Default is 1000.
+#' @param iter_min integer, minimum number of iterations enforced even if the
+#' the algorithm converge. Default is NULL, and \code{iter_max/2} is used.
 #' @param ninit integer, number of initialization to consider. In multiple
 #' initialization mode (>1), the algorithm is run for \code{iter_init}
 #' iterations with mutliple seeds and the best one (regarding the optimization
@@ -160,25 +162,30 @@ NULL
 #' \dontrun{
 #' ## generate data
 #' n <- 100
-#' p <- 200
-#' K <- 10
-#' factorU <- generate_factor_matrix(n, K, ngroup=3, average_signal=60,
+#' p <- 500
+#' K <- 20
+#' factorU <- generate_factor_matrix(n, K, ngroup=3,
+#'                                   average_signal=c(250,100,250),
 #'                                   group_separation=0.8,
-#'                                   distribution="gamma",
+#'                                   distribution="exponential",
 #'                                   shuffle_feature=TRUE)
-#' factorV <- generate_factor_matrix(p, K, ngroup=2, average_signal=60,
+#' factorV <- generate_factor_matrix(p, K, ngroup=2, average_signal=80,
 #'                                   group_separation=0.8,
-#'                                   distribution="gamma",
+#'                                   distribution="exponential",
 #'                                   shuffle_feature=TRUE,
-#'                                   prop_noise_feature=0.4,
-#'                                   noise_level=0.5)
+#'                                   prop_noise_feature=0.6)
 #' U <- factorU$factor_matrix
 #' V <- factorV$factor_matrix
 #' count_data <- generate_count_matrix(n, p, K, U, V,
-#'                                     ZI=TRUE, prob1=rep(0.5,p))
+#'                                     ZI=TRUE, prob1=rep(0.3,p))
 #' X <- count_data$X
 #' ## or use your own data as a count matrix
 #' ## of dimension cells x genes (individuals x features)
+#'
+#' ## pre-filtering
+#' kept_cols <- prefilter(X, prop = 0.05, quant_max = 0.95,
+#'                        presel = TRUE, threshold = 0.2)
+#' X <- X[,kept_cols]
 #' ## run pCMF algorithm
 #' res <- pCMF(X, K, verbose=FALSE, zero_inflation = TRUE, sparsity = TRUE)
 #' ## rerun with genes that contributes
@@ -190,13 +197,16 @@ NULL
 pCMF <- function(X, K,
                  zero_inflation = TRUE, sparsity = TRUE, sel_bound = 0.5,
                  verbose = TRUE, monitor = TRUE,
-                 iter_max = 1000, ninit = 1, iter_init = 100,
+                 iter_max = 1000, iter_min = NULL, ninit = 1, iter_init = 100,
                  ncores = 1, reorder_factor = TRUE, seed = NULL) {
     res <- NULL
+    if(is.null(iter_min)) {
+        iter_min <- as.integer(iter_max / 2)
+    }
     if(!zero_inflation & !sparsity) {
         res <- run_gap_factor(X, K, verbose = verbose,
                               monitor = monitor, iter_max = iter_max,
-                              iter_min = as.integer(iter_max / 2),
+                              iter_min = iter_min,
                               init_mode = "random",
                               epsilon = 1e-2, additional_iter = 10L,
                               conv_mode = 1L, ninit = ninit,
@@ -206,7 +216,7 @@ pCMF <- function(X, K,
     } else if(zero_inflation & !sparsity) {
         res <- run_zi_gap_factor(X, K, verbose = verbose,
                                  monitor = monitor, iter_max = iter_max,
-                                 iter_min = as.integer(iter_max / 2),
+                                 iter_min = iter_min,
                                  init_mode = "random",
                                  epsilon = 1e-2, additional_iter = 10L,
                                  conv_mode = 1L, ninit = ninit,
@@ -214,25 +224,35 @@ pCMF <- function(X, K,
                                  reorder_factor = reorder_factor,
                                  seed = seed)
     } else if(!zero_inflation & sparsity) {
+
+        prior_S <- 1-exp(-apply(X,2,sd)/mean(X[X!=0]))
+        prob_S <- matrix(rep(prior_S, K), ncol=K)
+
         res <- run_sparse_gap_factor(X, K, sel_bound = sel_bound, verbose = verbose,
                                      monitor = monitor, iter_max = iter_max,
-                                     iter_min = as.integer(iter_max / 2),
+                                     iter_min = iter_min,
                                      init_mode = "random",
                                      epsilon = 1e-2, additional_iter = 10L,
                                      conv_mode = 1L, ninit = ninit,
                                      iter_init = iter_init, ncores = ncores,
                                      reorder_factor = reorder_factor,
-                                     seed = seed)
+                                     seed = seed,
+                                     prob_S = prob_S, prior_S = prior_S)
     } else if(zero_inflation & sparsity) {
+
+        prior_S <- 1-exp(-apply(X,2,sd)/mean(X[X!=0]))
+        prob_S <- matrix(rep(prior_S, K), ncol=K)
+
         res <- run_zi_sparse_gap_factor(X, K, sel_bound = sel_bound, verbose = verbose,
                                         monitor = monitor, iter_max = iter_max,
-                                        iter_min = as.integer(iter_max / 2),
+                                        iter_min = iter_min,
                                         init_mode = "random",
                                         epsilon = 1e-2, additional_iter = 10L,
                                         conv_mode = 1L, ninit = ninit,
                                         iter_init = iter_init, ncores = ncores,
                                         reorder_factor = reorder_factor,
-                                        seed = seed)
+                                        seed = seed,
+                                        prob_S = prob_S, prior_S = prior_S)
     }
 
     return(res)

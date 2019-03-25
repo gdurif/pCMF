@@ -7,53 +7,6 @@
 
 using namespace Rcpp;
 
-// start_profiler
-SEXP start_profiler(SEXP str);
-RcppExport SEXP _pCMF_start_profiler(SEXP strSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< SEXP >::type str(strSEXP);
-    rcpp_result_gen = Rcpp::wrap(start_profiler(str));
-    return rcpp_result_gen;
-END_RCPP
-}
-// stop_profiler
-SEXP stop_profiler();
-RcppExport SEXP _pCMF_stop_profiler() {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    rcpp_result_gen = Rcpp::wrap(stop_profiler());
-    return rcpp_result_gen;
-END_RCPP
-}
-// profile_matprod_col
-SEXP profile_matprod_col(int n, int p, int K);
-RcppExport SEXP _pCMF_profile_matprod_col(SEXP nSEXP, SEXP pSEXP, SEXP KSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< int >::type n(nSEXP);
-    Rcpp::traits::input_parameter< int >::type p(pSEXP);
-    Rcpp::traits::input_parameter< int >::type K(KSEXP);
-    rcpp_result_gen = Rcpp::wrap(profile_matprod_col(n, p, K));
-    return rcpp_result_gen;
-END_RCPP
-}
-// profile_matprod_row
-SEXP profile_matprod_row(int n, int p, int K);
-RcppExport SEXP _pCMF_profile_matprod_row(SEXP nSEXP, SEXP pSEXP, SEXP KSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< int >::type n(nSEXP);
-    Rcpp::traits::input_parameter< int >::type p(pSEXP);
-    Rcpp::traits::input_parameter< int >::type K(KSEXP);
-    rcpp_result_gen = Rcpp::wrap(profile_matprod_row(n, p, K));
-    return rcpp_result_gen;
-END_RCPP
-}
 // run_gap_factor
 SEXP run_gap_factor(SEXP X, int K, Rcpp::Nullable<MatrixXd> U, Rcpp::Nullable<MatrixXd> V, bool verbose, bool monitor, int iter_max, int iter_min, Rcpp::CharacterVector init_mode, double epsilon, int additional_iter, int conv_mode, int ninit, int iter_init, int ncores, bool reorder_factor, Rcpp::Nullable<uint32_t> seed, Rcpp::Nullable<MatrixXd> a1, Rcpp::Nullable<MatrixXd> a2, Rcpp::Nullable<MatrixXd> b1, Rcpp::Nullable<MatrixXd> b2, Rcpp::Nullable<MatrixXd> alpha1, Rcpp::Nullable<MatrixXd> alpha2, Rcpp::Nullable<MatrixXd> beta1, Rcpp::Nullable<MatrixXd> beta2);
 RcppExport SEXP _pCMF_run_gap_factor(SEXP XSEXP, SEXP KSEXP, SEXP USEXP, SEXP VSEXP, SEXP verboseSEXP, SEXP monitorSEXP, SEXP iter_maxSEXP, SEXP iter_minSEXP, SEXP init_modeSEXP, SEXP epsilonSEXP, SEXP additional_iterSEXP, SEXP conv_modeSEXP, SEXP ninitSEXP, SEXP iter_initSEXP, SEXP ncoresSEXP, SEXP reorder_factorSEXP, SEXP seedSEXP, SEXP a1SEXP, SEXP a2SEXP, SEXP b1SEXP, SEXP b2SEXP, SEXP alpha1SEXP, SEXP alpha2SEXP, SEXP beta1SEXP, SEXP beta2SEXP) {
@@ -234,16 +187,12 @@ END_RCPP
 RcppExport SEXP run_testthat_tests();
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_pCMF_start_profiler", (DL_FUNC) &_pCMF_start_profiler, 1},
-    {"_pCMF_stop_profiler", (DL_FUNC) &_pCMF_stop_profiler, 0},
-    {"_pCMF_profile_matprod_col", (DL_FUNC) &_pCMF_profile_matprod_col, 3},
-    {"_pCMF_profile_matprod_row", (DL_FUNC) &_pCMF_profile_matprod_row, 3},
     {"_pCMF_run_gap_factor", (DL_FUNC) &_pCMF_run_gap_factor, 25},
     {"_pCMF_run_poisson_nmf", (DL_FUNC) &_pCMF_run_poisson_nmf, 16},
     {"_pCMF_run_sparse_gap_factor", (DL_FUNC) &_pCMF_run_sparse_gap_factor, 28},
     {"_pCMF_run_zi_gap_factor", (DL_FUNC) &_pCMF_run_zi_gap_factor, 27},
     {"_pCMF_run_zi_sparse_gap_factor", (DL_FUNC) &_pCMF_run_zi_sparse_gap_factor, 30},
-    {"run_testthat_tests",             (DL_FUNC) &run_testthat_tests,              0},
+    {"run_testthat_tests", (DL_FUNC) &run_testthat_tests, 0},
     {NULL, NULL, 0}
 };
 

@@ -5,9 +5,9 @@
 \title{generate_factor_matrix}
 \usage{
 generate_factor_matrix(nfeature, K, ngroup = 1, average_signal = 1,
-  group_separation = 0.5, distribution = "uniform",
-  shuffle_feature = TRUE, prop_noise_feature = 0, noise_level = 0.5,
-  seed = NULL)
+  disp = NULL, group_separation = 0.5, distribution = "uniform",
+  shuffle_feature = TRUE, prop_noise_feature = 0, noise_level = NULL,
+  seed = NULL, tag = NULL)
 }
 \arguments{
 \item{nfeature}{integer, number of features (individuals or variables),
@@ -26,13 +26,18 @@ average signal level in the structured block of the generated matrix. If a
 single value, all groups share the same \code{average_signal}. If a
 vector, each group has the corresponding \code{average_signal}.}
 
+\item{disp}{real value or vectorof real value of size \code{ngroup}.
+If distribution is used, \code{disp} defines the dispersion parameter
+for each/all group(s) (if resp vector/single value) for the gamma distribution.
+See details. Default value is NULL, and \code{disp} is set to 1.}
+
 \item{group_separation}{real value in \[0,1\] indicating the level of
 separation between the groups, 0 = no separation, 1 = high separation.
 Default value is 0.5.}
 
 \item{distribution}{character string, distribution used to generate
-the matrix entries. Default is "uniform", another possible value is
-"gamma".}
+the matrix entries. Default is "uniform", other possible values are
+"gamma" and "exponential". See details.}
 
 \item{shuffle_feature}{boolean, should the features (individuals
 or variables) be shuffled in the output.}
@@ -41,10 +46,16 @@ or variables) be shuffled in the output.}
 that does not contributes to the group structure, i.e. constitute an
 additional group of noise. Default is 0.}
 
-\item{noise_level}{real value, average level of the noisy feature.}
+\item{noise_level}{real value, average level of the noisy feature. Default
+is null and the level of noisy feature is set to be
+(1 - \code{group_separation}) * \code{average_signal} / \code{disp}.}
 
 \item{seed}{integer, seed value for random number generator. Default value
 is NULL and no the seed is not specifically set.}
+
+\item{tag}{string, tag to name feature (i.e. rows in the factor matrix),
+with "tagXXX" where "XXX" is the row number. Default value is NULL and
+feature are labelled "1", "2", etc.}
 }
 \value{
 list containing the following
@@ -64,6 +75,22 @@ a matrix factorization framework \eqn{X ~ UV^t}:
 
 More details regarding data generation can be found in Durif et al. (2017,
 Appendix).
+
+If the uniform distribution is used, entries in \code{U} and \code{V} are
+simulated from the distribution Uniform(0, 2*\code{average_signal}/\code{K}).
+
+If the gamma distribution is used, entries in \code{U} and \code{V} are
+simulated from the distribution Gamma(\code{average_signal}/\code{K}, 1).
+If the parameter \code{disp} is given, then the distribution
+Gamma(\code{average_signal}/\code{K}, \code{disp}) is used.
+
+If the exponential distribution is used, entries in \code{U} and \code{V} are
+simulated from the distribution Gamma(1, \code{K}/\code{average_signal})
+which corresponds to the distribution
+Exponential(\code{K}/\code{average_signal}).
+
+The noise variables are generated with the same framework, using
+the parameter \code{noise_level} instead of \code{average_signal}.
 }
 \examples{
 \dontrun{

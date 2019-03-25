@@ -265,7 +265,7 @@ using std::string;
 //' U <- factorU$factor_matrix
 //' V <- factorV$factor_matrix
 //' count_data <- generate_count_matrix(n, p, K, U, V,
-//'                                     ZI=TRUE, prob1=rep(0.5,p))
+//'                                     ZI=TRUE, prob1=rep(0.3,p))
 //' X <- count_data$X
 //' ## or use your own data as a count matrix
 //' ## of dimension cells x genes (individuals x features)

@@ -275,12 +275,11 @@ using std::string;
 //'                                   group_separation=0.8,
 //'                                   distribution="gamma",
 //'                                   shuffle_feature=TRUE,
-//'                                   prop_noise_feature=0.4,
-//'                                   noise_level=0.5)
+//'                                   prop_noise_feature=0.4)
 //' U <- factorU$factor_matrix
 //' V <- factorV$factor_matrix
 //' count_data <- generate_count_matrix(n, p, K, U, V,
-//'                                     ZI=TRUE, prob1=rep(0.5,p))
+//'                                     ZI=TRUE, prob1=rep(0.3,p))
 //' X <- count_data$X
 //' ## or use your own data as a count matrix
 //' ## of dimension cells x genes (individuals x features)
@@ -323,6 +322,6 @@ SEXP run_zi_sparse_gap_factor(SEXP X, int K, double sel_bound = 0.5,
                                                                                                    alpha1, alpha2, beta1, beta2,
                                                                                                    prob_S, prior_S,
                                                                                                    prob_D, prior_D);
-    output.attr("class") = "pCMF";
+    output.attr("class") = "spCMF";
     return output;
 }

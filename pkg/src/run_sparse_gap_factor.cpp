@@ -263,8 +263,7 @@ using std::string;
 //'                                   group_separation=0.8,
 //'                                   distribution="gamma",
 //'                                   shuffle_feature=TRUE,
-//'                                   prop_noise_feature=0.4,
-//'                                   noise_level=0.5)
+//'                                   prop_noise_feature=0.5)
 //' U <- factorU$factor_matrix
 //' V <- factorV$factor_matrix
 //' count_data <- generate_count_matrix(n, p, K, U, V)
@@ -308,6 +307,6 @@ SEXP run_sparse_gap_factor(SEXP X, int K, double sel_bound = 0.5,
                                                                                                 alpha1, alpha2, beta1, beta2,
                                                                                                 prob_S, prior_S,
                                                                                                 R_NilValue, R_NilValue);
-    output.attr("class") = "pCMF";
+    output.attr("class") = "spCMF";
     return output;
 }
