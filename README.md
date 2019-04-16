@@ -61,12 +61,12 @@ available at <https://github.com/gdurif/pCMF_experiments>.
 
 You can install the `pCMF` R package with the following R command:
 ```R
-devtools::install_git("https://gitlab.inria.fr/gdurif/pCMF", subdir="pkg", ref="prod")
+devtools::install_github("gdurif/pCMF", subdir="pkg", ref="prod")
 ```
 
 If you don't have OpenMP installed on your machine (for instance on MacOS), you can run the following command:
 ```R
-devtools::install_git("https://gitlab.inria.fr/gdurif/pCMF", subdir="pkg", ref="prod_no_omp")
+devtools::install_github("gdurif/pCMF", subdir="pkg", ref="prod_no_omp")
 ```
 **Note:** We encourage you to install a compiler (e.g. gcc) that supports OpenMP in order 
 to benefit from multi-core computing and improve computation performance.
